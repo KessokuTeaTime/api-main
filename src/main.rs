@@ -1,11 +1,16 @@
 use std::env;
 use std::sync::Arc;
-use actix_web::{App, HttpServer, middleware};
+use actix_web::{App, HttpServer, middleware, Responder, get, HttpResponse};
 use spdlog::{info, Logger};
 use spdlog::sink::{RotatingFileSink, RotationPolicy};
 
 mod internal;
 mod structs;
+
+#[get("/health")]
+async fn health() -> impl Responder {
+    HttpResponse::Ok().finish()
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -27,6 +32,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .service(internal::notify)
+            .service(health)
     })
     .bind("0.0.0.0:8086")?
     .run()
