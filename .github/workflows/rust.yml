@@ -1,0 +1,25 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set rust to stable
+      run: rustup override set stable
+    - name: Output the version
+      run: rustup --version
+    - name: Build
+      run: cargo build --verbose --release
+    - uses: actions/upload-artifact@v4
+      with:
+        path: ./target/release
