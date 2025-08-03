@@ -1,8 +1,5 @@
-use std::env;
-use std::sync::Arc;
 use actix_web::{App, HttpServer, middleware, Responder, get, HttpResponse};
-use spdlog::{info, Logger};
-use spdlog::sink::{RotatingFileSink, RotationPolicy};
+use spdlog::info;
 
 mod internal;
 mod structs;
@@ -14,17 +11,7 @@ async fn health() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let path = env::current_exe()?.with_file_name("rotating_daily.log");
-
-    let file_sink = Arc::new(
-        RotatingFileSink::builder()
-            .base_path(path)
-            .rotation_policy(RotationPolicy::Daily { hour: 0, minute: 0 })
-            .build().unwrap(),
-    );
-    let new_logger = Arc::new(Logger::builder().sink(file_sink).build().unwrap());
-    spdlog::set_default_logger(new_logger);
-
+    spdlog::default_logger().set_level_filter(spdlog::LevelFilter::All);
     info!("the logger initialized");
     info!("Starting server on port 8086");
 
