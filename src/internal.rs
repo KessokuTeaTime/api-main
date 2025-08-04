@@ -89,6 +89,9 @@ fn get_artifact(run_id: &str) -> State<Artifact> {
         }
     };
 
+    let data = response.text();
+    error!("Received: {data}");
+    todo!("Fix the bug");
     match response.json::<Artifacts>() {
         Ok(json) => match json.total_count {
             0 => {
