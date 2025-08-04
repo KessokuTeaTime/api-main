@@ -1,2 +1,9 @@
+*/target
 /target
+/.vscode
 /.idea
+/.VSCodeCounter
+/Cargo.lock
+*/Cargo.lock
+
+*.DS_STORE

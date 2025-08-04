@@ -1,12 +1,12 @@
 use serde::Deserialize;
 
-#[derive(Debug,  Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Artifacts {
     pub total_count: u8,
     pub artifacts: Vec<Artifact>,
 }
 
-#[derive(Debug,  Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Artifact {
     pub id: u64,
     pub node_id: String,
@@ -22,7 +22,7 @@ pub struct Artifact {
     pub workflow_run: Option<WorkflowRun>,
 }
 
-#[derive(Debug,  Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct WorkflowRun {
     pub id: u64,
     pub repository_id: u64,

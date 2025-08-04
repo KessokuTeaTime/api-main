@@ -1,20 +1,25 @@
-use actix_web::{App, HttpServer, middleware, Responder, get, HttpResponse, HttpRequest};
+use actix_web::{App, HttpRequest, HttpResponse, HttpServer, Responder, get, middleware};
 use spdlog::{debug, info};
 
 mod internal;
 mod structs;
 
+const PORT: u16 = 8086;
+
 #[get("/health")]
 async fn health(req: HttpRequest) -> impl Responder {
-    debug!("{} request health!", req.connection_info().host());
+    debug!(
+        "Huston, good to hear from {}!",
+        req.connection_info().host()
+    );
     HttpResponse::Ok().finish()
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenvy::dotenv().ok();
     spdlog::default_logger().set_level_filter(spdlog::LevelFilter::All);
-    info!("the logger initialized");
-    info!("Starting server on port 8086");
+    info!("Starting server on port {PORT}");
 
     HttpServer::new(move || {
         App::new()
@@ -22,7 +27,7 @@ async fn main() -> std::io::Result<()> {
             .service(internal::notify)
             .service(health)
     })
-    .bind("0.0.0.0:8086")?
+    .bind(format!("0.0.0.0:{PORT}"))?
     .run()
     .await
 }
