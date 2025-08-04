@@ -68,6 +68,7 @@ fn get_http_builder(url: String) -> RequestBuilder {
         .header(header::ACCEPT, "application/vnd.github+json")
         .bearer_auth(GITHUB_TOKEN)
         .header("X-GitHub-Api-Version", "2022-11-28")
+        .header("User-Agent", "KessokuTeaTime-API/1.0")
 }
 
 fn get_artifact(run_id: &str) -> State<Artifact> {
@@ -88,10 +89,6 @@ fn get_artifact(run_id: &str) -> State<Artifact> {
             };
         }
     };
-
-    let data = response.text().unwrap();
-    error!("Received: {data}");
-    todo!("Fix the bug");
     match response.json::<Artifacts>() {
         Ok(json) => match json.total_count {
             0 => {
