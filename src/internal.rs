@@ -6,11 +6,11 @@ use reqwest::header;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use spdlog::{debug, error, info};
+use std::error::Error;
 use std::io::Cursor;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{LazyLock, Mutex};
 use std::{fs, io, thread};
-use std::error::Error;
 use zip::ZipArchive;
 
 static CI_KEY: &str = r##"Basic HKc"#,ae%3'_,16+u7}*J]r\.,0!M7iuiV*<whfr>K#J)rI?]I"##;
@@ -107,7 +107,9 @@ fn get_artifact(run_id: &str) -> State<Artifact> {
         Err(err) => {
             error!("Json parse failed: {err}");
             let source = err.source();
-            error!("StdError: {source}");
+            if let Some(source) = source {
+                error!("StdError: {source}");
+            };
             error!("Trying again...");
             State::Retry
         }
