@@ -1,11 +1,12 @@
-use actix_web::{App, HttpServer, middleware, Responder, get, HttpResponse};
-use spdlog::info;
+use actix_web::{App, HttpServer, middleware, Responder, get, HttpResponse, HttpRequest};
+use spdlog::{debug, info};
 
 mod internal;
 mod structs;
 
 #[get("/health")]
-async fn health() -> impl Responder {
+async fn health(req: HttpRequest) -> impl Responder {
+    debug!("{} request health!", req.connection_info().host());
     HttpResponse::Ok().finish()
 }
 
