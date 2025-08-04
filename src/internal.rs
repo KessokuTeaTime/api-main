@@ -106,7 +106,8 @@ fn get_artifact(run_id: &str) -> State<Artifact> {
         },
         Err(err) => {
             error!("Json parse failed: {err}");
-            error!("StdError: {err.source()}");
+            let source = err.source();
+            error!("StdError: {source}");
             error!("Trying again...");
             State::Retry
         }
