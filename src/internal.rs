@@ -89,7 +89,7 @@ fn get_artifact(run_id: &str) -> State<Artifact> {
         }
     };
 
-    let data = response.text();
+    let data = response.text().unwrap();
     error!("Received: {data}");
     todo!("Fix the bug");
     match response.json::<Artifacts>() {
