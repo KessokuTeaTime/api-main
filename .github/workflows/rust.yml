@@ -1,10 +1,11 @@
-name: Rust
+name: Build Rust binaries
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -22,4 +23,4 @@ jobs:
       run: cargo build --verbose --release
     - uses: actions/upload-artifact@v4
       with:
-        path: ./target/release/ktt-api
+        path: ./target/release/api
