@@ -86,7 +86,7 @@ async fn deploy(payload: Payload) {
     };
     let should_exit = || {
         let latest_payload_index = holder.latest_payload_index.load(Ordering::SeqCst);
-        let result = index < latest_payload_index;
+        let result = index < latest_payload_index - 1;
         if result {
             warn!(
                 "{TRACING_REALM} Current payload index ({index}) is falling behind the latest one ({latest_payload_index}), exiting deployment!"
