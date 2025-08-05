@@ -48,6 +48,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
+name = "api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async_zip",
+ "axum",
+ "dotenvy",
+ "futures",
+ "hex",
+ "parking_lot",
+ "reqwest",
+ "sanitize-filename",
+ "serde",
+ "sha2",
+ "tokio",
+ "tokio-util",
+ "tower-http",
+ "tower-layer",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "zip",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -868,31 +893,6 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "ktt-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async_zip",
- "axum",
- "dotenvy",
- "futures",
- "hex",
- "parking_lot",
- "reqwest",
- "sanitize-filename",
- "serde",
- "sha2",
- "tokio",
- "tokio-util",
- "tower-http",
- "tower-layer",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "zip",
 ]
 
 [[package]]
