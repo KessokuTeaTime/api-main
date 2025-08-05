@@ -7,8 +7,6 @@ use axum::{
 };
 use tracing::trace;
 
-const TRACING_REALM: &str = "[MIDDLEWARE] [LOGGER]";
-
 pub(crate) async fn log_request(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     request: Request,
@@ -16,7 +14,7 @@ pub(crate) async fn log_request(
 ) -> Response {
     trace!(
         addr = format!("{addr}"),
-        "{TRACING_REALM} Request received: {request:#?}"
+        "Request received: {request:#?}"
     );
     next.run(request).await
 }

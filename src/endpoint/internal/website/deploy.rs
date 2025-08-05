@@ -21,8 +21,6 @@ use std::{
     },
 };
 
-const TRACING_REALM: &str = "[ENDPOINT] [POST /internal/website/deploy]";
-
 #[derive(Default)]
 struct BusinessHolder {
     lock: tokio::sync::Mutex<()>,
@@ -77,7 +75,7 @@ async fn deploy(payload: Payload) {
 
     let cleanup = async |succeed: bool| {
         if succeed {
-            debug!("{TRACING_REALM} Setting the latest payload index to 0…");
+            debug!("Setting the latest payload index to 0…");
             holder.latest_payload_index.store(u8::MIN, Ordering::SeqCst);
             drop(_fs_guard);
         } else {
@@ -89,7 +87,7 @@ async fn deploy(payload: Payload) {
         let result = index < latest_payload_index - 1;
         if result {
             warn!(
-                "{TRACING_REALM} Current payload index ({index}) is falling behind the latest one ({latest_payload_index}), exiting deployment with {payload}!"
+                "Current payload index ({index}) is falling behind the latest one ({latest_payload_index}), exiting deployment with {payload}!"
             );
         }
         result
@@ -103,11 +101,11 @@ async fn deploy(payload: Payload) {
         // Fetches the artifact
         let artifact = match fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await {
             State::Success(artifact) => {
-                info!("{TRACING_REALM} Fetched artifact with {payload}");
+                info!("Fetched artifact with {payload}");
                 artifact
             }
             State::Retry => {
-                error!("{TRACING_REALM} Failed to fetch artifact with {payload}");
+                error!("Failed to fetch artifact with {payload}");
                 match retry_if_possible(&mut retry) {
                     Ok(_) => continue 'artifact_loop,
                     Err(_) => break 'artifact_loop,
@@ -124,11 +122,11 @@ async fn deploy(payload: Payload) {
         let digest = artifact.digest.clone();
         let stream = match download_artifact(artifact).await {
             State::Success(stream) => {
-                info!("{TRACING_REALM} Downloading artifact with {payload} ..");
+                info!("Downloading artifact with {payload} ..");
                 stream
             }
             State::Retry => {
-                error!("{TRACING_REALM} Failed to start download artifact with {payload}");
+                error!("Failed to start download artifact with {payload}");
                 match retry_if_possible(&mut retry) {
                     Ok(_) => continue 'artifact_loop,
                     Err(_) => break 'artifact_loop,
@@ -157,19 +155,17 @@ async fn deploy(payload: Payload) {
             Ok(_) => {
                 if hex::encode(sha_hasher.finalize()) == digest.unwrap()[7..] {
                     info!(
-                        "{TRACING_REALM} Successfully deployed to {} with {}!",
+                        "Successfully deployed to {} with {}!",
                         payload.dest, payload.run_id
                     );
                     cleanup(true).await;
                 } else {
-                    error!("{TRACING_REALM} Failed to match artifact's hash");
+                    error!("Failed to match artifact's hash");
                     cleanup(false).await;
                 }
             }
             Err(err) => {
-                error!(
-                    "{TRACING_REALM} Failed to extract destination archive with {payload}: {err}"
-                );
+                error!("Failed to extract destination archive with {payload}: {err}");
                 cleanup(false).await;
             }
         }
