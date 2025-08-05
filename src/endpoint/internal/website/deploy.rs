@@ -79,6 +79,7 @@ async fn deploy(payload: Payload) {
         if succeed {
             debug!("{TRACING_REALM} Setting the latest payload index to 0…");
             holder.latest_payload_index.store(u8::MIN, Ordering::SeqCst);
+            drop(_fs_guard);
         } else {
             drop(tokio::fs::remove_dir_all(&path).await);
         }
