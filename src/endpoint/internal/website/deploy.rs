@@ -8,19 +8,28 @@ use parking_lot::Mutex;
 use serde::Deserialize;
 use sha2::Digest as _;
 use tokio_util::io::StreamReader;
-use tracing::{error, info};
+use tracing::{debug, error, info, warn};
 
 use std::{
     collections::HashMap,
     fmt::Display,
     io,
     path::PathBuf,
-    sync::{Arc, LazyLock},
+    sync::{
+        Arc, LazyLock,
+        atomic::{AtomicU8, Ordering},
+    },
 };
 
 const TRACING_REALM: &str = "[ENDPOINT] [POST /internal/website/deploy]";
 
-static FS_BUSINESS: LazyLock<Mutex<HashMap<PathBuf, Arc<tokio::sync::Mutex<()>>>>> =
+#[derive(Default)]
+struct BusinessHolder {
+    lock: tokio::sync::Mutex<()>,
+    latest_payload_index: AtomicU8,
+}
+
+static FS_BUSINESSES: LazyLock<Mutex<HashMap<PathBuf, Arc<BusinessHolder>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 #[derive(Debug, Deserialize, Clone)]
@@ -56,8 +65,40 @@ pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
 /// Deploys the website with a [`Payload`].
 async fn deploy(payload: Payload) {
     let mut retry: u8 = 0;
+    let path = format!("/var/{}/html", &payload.dest);
+
+    let holder = FS_BUSINESSES
+        .lock()
+        .entry(PathBuf::from(&path))
+        .or_default()
+        .clone();
+    let index = holder.latest_payload_index.fetch_add(1, Ordering::SeqCst); // Acquires the index before waiting for the lock
+    let _fs_guard = holder.lock.lock().await;
+
+    let cleanup = async |succeed: bool| {
+        if succeed {
+            debug!("{TRACING_REALM} Setting the latest payload index to 0…");
+            holder.latest_payload_index.store(u8::MIN, Ordering::SeqCst);
+        } else {
+            drop(tokio::fs::remove_dir_all(&path).await);
+        }
+    };
+    let should_exit = || {
+        let latest_payload_index = holder.latest_payload_index.load(Ordering::SeqCst);
+        let result = index < latest_payload_index;
+        if result {
+            warn!(
+                "{TRACING_REALM} Current payload index ({index}) is falling behind the latest one ({latest_payload_index}), exiting deployment!"
+            );
+        }
+        result
+    };
 
     'artifact_loop: loop {
+        if should_exit() {
+            break 'artifact_loop;
+        };
+
         // Fetches the artifact
         let artifact = match fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await {
             State::Success(artifact) => {
@@ -73,9 +114,13 @@ async fn deploy(payload: Payload) {
             }
             State::Stop => break 'artifact_loop,
         };
-        let digest = artifact.digest.clone();
+
+        if should_exit() {
+            break 'artifact_loop;
+        }
 
         // Downloads the artifact
+        let digest = artifact.digest.clone();
         let stream = match download_artifact(artifact).await {
             State::Success(stream) => {
                 info!("{TRACING_REALM} Downloading artifact with {payload:?} ..");
@@ -91,6 +136,12 @@ async fn deploy(payload: Payload) {
             State::Stop => break 'artifact_loop,
         };
 
+        if should_exit() {
+            break 'artifact_loop;
+        }
+
+        // Extracts the archive
+
         let mut sha_hasher = sha2::Sha256::new();
         let zip_reader = ZipFileReader::with_tokio(StreamReader::new(
             stream
@@ -100,38 +151,28 @@ async fn deploy(payload: Payload) {
                 })
                 .map_err(io::Error::other),
         ));
-        let path = format!("/var/{}/html", &payload.dest);
-        let cleanup = async {
-            drop(tokio::fs::remove_dir_all(&path).await);
-        };
-
-        let lock = FS_BUSINESS
-            .lock()
-            .entry(PathBuf::from(&path))
-            .or_default()
-            .clone();
-
-        let _fs_guard = lock.lock().await;
 
         match crate::fs::extract_archive(zip_reader, &path, true).await {
             Ok(_) => {
-                if hex::encode(sha_hasher.finalize()) != digest.unwrap()[7..] {
+                if hex::encode(sha_hasher.finalize()) == digest.unwrap()[7..] {
+                    info!(
+                        "{TRACING_REALM} Successfully deployed to {} with {}!",
+                        payload.dest, payload.run_id
+                    );
+                    cleanup(true).await;
+                } else {
                     error!("{TRACING_REALM} Failed to match artifact's hash");
-                    cleanup.await;
-                    break 'artifact_loop;
+                    cleanup(false).await;
                 }
-                info!(
-                    "{TRACING_REALM} Successfully deployed to {} with {}!",
-                    payload.dest, payload.run_id
-                );
             }
             Err(err) => {
                 error!(
                     "{TRACING_REALM} Failed to extract destination archive with {payload:?}: {err}"
                 );
-                cleanup.await;
+                cleanup(false).await;
             }
         }
+
         break 'artifact_loop;
     }
 }

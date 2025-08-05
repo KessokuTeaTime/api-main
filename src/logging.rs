@@ -11,7 +11,7 @@ pub fn setup() -> Result<(), Error> {
     let stderr_layer = tracing_subscriber::fmt::layer()
         .pretty()
         .with_writer(std::io::stdout);
-    let rolling_file_layer = tracing_subscriber::fmt::layer().pretty().with_writer(
+    let rolling_file_layer = tracing_subscriber::fmt::layer().with_writer(
         RollingFileAppender::builder()
             .filename_suffix("log")
             .build(&*DIR_TRACING)?,
