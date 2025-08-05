@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::workflow::WorkflowRun;
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Artifacts {
     pub total_count: u8,
@@ -20,13 +22,4 @@ pub struct Artifact {
     pub updated_at: Option<String>,
     pub digest: Option<String>,
     pub workflow_run: Option<WorkflowRun>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct WorkflowRun {
-    pub id: u64,
-    pub repository_id: u64,
-    pub head_repository_id: u64,
-    pub head_branch: String,
-    pub head_sha: String,
 }

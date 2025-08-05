@@ -1,19 +1,24 @@
-use actix_web::{App, HttpRequest, HttpResponse, HttpServer, Responder, get, middleware};
-use spdlog::{debug, info};
+//! KessokuTeaTime API backend._
 
-mod internal;
-mod structs;
+#![allow(clippy::future_not_send)]
+
+use std::{env, sync::LazyLock};
+
+use actix_web::{App, HttpServer, middleware};
+use spdlog::info;
+
+mod gets;
+mod posts;
+mod state;
+mod workflow;
 
 const PORT: u16 = 8086;
+const MAX_RETRY: u8 = 5;
 
-#[get("/health")]
-async fn health(req: HttpRequest) -> impl Responder {
-    debug!(
-        "Huston, good to hear from {}!",
-        req.connection_info().host()
-    );
-    HttpResponse::Ok().finish()
-}
+static KTT_API_KEY: LazyLock<String> =
+    LazyLock::new(|| env::var("KTT_API_KEY").expect("KTT_API_KEY not set in environment"));
+static GITHUB_TOKEN: LazyLock<String> =
+    LazyLock::new(|| env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not set in environment"));
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -22,10 +27,12 @@ async fn main() -> std::io::Result<()> {
     info!("Starting server on port {PORT}");
 
     HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .service(internal::notify)
-            .service(health)
+        let mut app = App::new().wrap(middleware::Logger::default());
+
+        app = gets::register_services(app);
+        app = posts::register_services(app);
+
+        app
     })
     .bind(format!("0.0.0.0:{PORT}"))?
     .run()

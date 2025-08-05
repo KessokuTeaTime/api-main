@@ -7,11 +7,16 @@ edition = "2024"
 actix-web = "4.11.0"
 dotenvy = "0.15.7"
 hex = "0.4.3"
-reqwest = { version = "0.12.22", features = ["json", "blocking"] }
+reqwest = { version = "0.12.22", features = ["json", "blocking", "stream"] }
 serde = { version = "1.0.219", features = ["derive"] }
 sha2 = "0.10.9"
 spdlog-rs = "0.4.3"
 zip = { version = "4.3.0", default-features = false, features = ["deflate"] }
+parking_lot = "0.12"
+futures = "0.3"
+async_zip = { version = "*", features = ["tokio"] }
+tokio = { version = "1.47", features = ["fs"] }
+tokio-util = { version = "0.7", features = ["io"] }
 
 [workspace.lints.rust]
 missing-docs = "warn"
@@ -50,3 +55,6 @@ strip = "symbols"
 lto = true
 panic = "unwind"
 codegen-units = 1
+
+[lints]
+workspace = true
