@@ -1,13 +1,10 @@
-use actix_web::{HttpRequest, HttpResponse, Responder, get};
+use std::net::SocketAddr;
+
+use axum::{extract::ConnectInfo, http::StatusCode, response::IntoResponse};
 use spdlog::debug;
 
-#[get("/health")]
-pub async fn get(req: HttpRequest) -> impl Responder {
-    debug!(
-        "Huston, good to hear from {}!",
-        req.connection_info()
-            .realip_remote_addr()
-            .unwrap_or("unknown ip address")
-    );
-    HttpResponse::Ok().finish()
+pub async fn get(ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
+    let msg = format!("Huston, good to hear from {addr}!");
+    debug!("{msg}");
+    (StatusCode::OK, msg)
 }

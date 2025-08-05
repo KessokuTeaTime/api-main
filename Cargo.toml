@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-actix-web = "4.11.0"
+# actix-web = "4.11.0"
+axum = "0.8.4"
 dotenvy = "0.15.7"
 hex = "0.4.3"
 reqwest = { version = "0.12.22", features = ["json", "blocking", "stream"] }
@@ -15,8 +16,9 @@ zip = { version = "4.3.0", default-features = false, features = ["deflate"] }
 parking_lot = "0.12"
 futures = "0.3"
 async_zip = { version = "*", features = ["tokio"] }
-tokio = { version = "1.47", features = ["fs"] }
-tokio-util = { version = "0.7", features = ["io"] }
+tokio = { version = "1.47", features = ["fs", "rt-multi-thread"] }
+tokio-util = { version = "0.7", features = ["io", "compat"] }
+sanitize-filename = "0.6"
 
 [workspace.lints.rust]
 missing-docs = "warn"

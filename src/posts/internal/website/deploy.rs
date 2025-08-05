@@ -1,40 +1,42 @@
-use crate::KTT_API_KEY;
 use crate::state::{State, retry_if_possible};
 use crate::workflow::artifact::{download_artifact, fetch_artifact};
-use actix_web::{HttpRequest, HttpResponse, Responder, post, web};
+
 use async_zip::base::read::stream::ZipFileReader;
-use futures::stream::TryStreamExt;
+use axum::{extract::Json, http::StatusCode, response::IntoResponse};
+use futures::stream::TryStreamExt as _;
 use parking_lot::Mutex;
-
-use serde::Deserialize;
-
-use spdlog::{debug, error, info, warn};
-
-use std::fmt::Display;
-
-use std::sync::LazyLock;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::{fs, io, thread};
 use tokio_util::io::StreamReader;
 
-/// The pending [`WorkflowInfo`] to be deployed.
-static PENDING_INFO: LazyLock<Mutex<Option<Body>>> = LazyLock::new(|| Mutex::new(None));
+use serde::Deserialize;
+use spdlog::{debug, error, info, warn};
+
+use std::{
+    fmt::Display,
+    sync::{
+        LazyLock,
+        atomic::{AtomicBool, Ordering},
+    },
+    {io, thread},
+};
+
+/// The pending [`Payload`] to be deployed.
+static PENDING_PAYLOAD: LazyLock<Mutex<Option<Payload>>> = LazyLock::new(|| Mutex::new(None));
 /// Indicates whether a worker thread is currently running.
 static IS_THREAD_RUNNING: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct Body {
+pub struct Payload {
     pub run_id: String,
     pub dest: String,
 }
 
-impl Display for Body {
+impl Display for Payload {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{}<~{}", self.dest, self.run_id))
     }
 }
 
-impl Body {
+impl Payload {
     pub fn validate(self) -> Self {
         Self {
             run_id: self.run_id,
@@ -46,99 +48,49 @@ impl Body {
     }
 }
 
-/// Responds to a website deployment request.
-#[post("/internal/website/deploy")]
-async fn post(req: HttpRequest, body: web::Json<Body>) -> impl Responder {
-    debug!(
-        "Received notification from {}, authenticating…",
-        req.connection_info()
-            .realip_remote_addr()
-            .unwrap_or("unknown")
-    );
-
-    let authed = req
-        .headers()
-        .get("Authorization")
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s == *KTT_API_KEY)
-        .unwrap_or(false);
-
-    if authed {
-        info!(
-            "Authenticated the notification from {}",
-            req.connection_info()
-                .realip_remote_addr()
-                .unwrap_or("unknown")
-        );
-    } else {
-        error!(
-            "Failed to authenticate the notification from {}",
-            req.connection_info()
-                .realip_remote_addr()
-                .unwrap_or("unknown")
-        );
-
-        return HttpResponse::NotFound().finish();
-    }
-
+/// Responds to a website deployment request
+pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
     match IS_THREAD_RUNNING.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed) {
         Ok(_) => {
             // TODO: worker threads may no longer be required as we are using async to fetch res for now
             // Spawns a new worker thread
-            debug!("Spawning a thread with {body:?}");
-            thread::spawn(move || deploy(body.clone().validate()));
+            debug!("Spawning a thread with {payload:?}");
+            thread::spawn(move || deploy(payload.clone().validate()));
         }
         Err(_) => {
             // Suspends the latest request
-            let mut guard = PENDING_INFO.lock();
-            match guard.replace(body.clone()) {
+            let mut guard = PENDING_PAYLOAD.lock();
+            match guard.replace(payload.clone()) {
                 None => {
-                    warn!("A thread is already running! Suspending deployment with {body:?}");
+                    warn!("A thread is already running! Suspending deployment with {payload:?}");
                 }
-                Some(old_body) => {
+                Some(old_payload) => {
                     warn!(
-                        "A thread is already running! Suspending deployment with {body:?}, replacing {old_body:?}"
+                        "A thread is already running! Suspending deployment with {payload:?}, replacing {old_payload:?}"
                     );
                 }
             }
         }
     }
 
-    HttpResponse::Ok().finish()
+    StatusCode::OK
 }
 
-/// Extracts the archive to a specified destination.
-async fn extract_archive<R>(archive: R, dest: &str) -> io::Result<()>
-where
-    R: tokio::io::AsyncRead,
-{
-    let path = format!("/var/{dest}/html");
-
-    fs::remove_dir_all(&path)?;
-    fs::create_dir(&path)?;
-    // nope
-    // why
-    // non-seekable. leave for lunch
-    archive.extract_unwrapped_root_dir(&path, |_| true)?;
-    Ok(())
-}
-
-/// Deploys the website with a [`WorkflowInfo`].
-async fn deploy(body: Body) {
-    let mut body = body;
-
+/// Deploys the website with a [`Payload`].
+async fn deploy(mut payload: Payload) {
     'worker_loop: loop {
         let mut retry: u8 = 0;
 
         'artifact_loop: loop {
             // Fetches the artifact
-            let artifact = match fetch_artifact("KessokuTeaTime", "website", &body.run_id).await {
+            let artifact = match fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await
+            {
                 State::Success(artifact) => {
-                    info!("Fetched artifact with {body:?}");
+                    info!("Fetched artifact with {payload:?}");
                     artifact
                 }
                 State::Retry => {
-                    error!("Failed to fetch artifact with {body:?}");
+                    error!("Failed to fetch artifact with {payload:?}");
                     match retry_if_possible(&mut retry) {
                         Ok(_) => continue 'artifact_loop,
                         Err(_) => break 'artifact_loop,
@@ -150,11 +102,11 @@ async fn deploy(body: Body) {
             // Downloads the artifact
             let stream = match download_artifact(artifact).await {
                 State::Success(stream) => {
-                    info!("Downloaded artifact with {body:?}");
+                    info!("Downloading artifact with {payload:?} ..");
                     stream
                 }
                 State::Retry => {
-                    error!("Failed to download artifact with {body:?}");
+                    error!("Failed to start download artifact with {payload:?}");
                     match retry_if_possible(&mut retry) {
                         Ok(_) => continue 'artifact_loop,
                         Err(_) => break 'artifact_loop,
@@ -171,18 +123,23 @@ async fn deploy(body: Body) {
             //     }
             // };
 
-            let zip_reader = ZipFileReader::with_tokio(StreamReader::new(
-                stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err)),
-            ));
-            match extract_archive(&mut archive, &body.dest) {
+            let zip_reader =
+                ZipFileReader::with_tokio(StreamReader::new(stream.map_err(io::Error::other)));
+            match crate::fs::extract_archive(
+                zip_reader,
+                &format!("/var/{}/html", &payload.dest),
+                true,
+            )
+            .await
+            {
                 Ok(_) => {
                     info!(
                         "Successfully deployed to {} with {}!",
-                        body.dest, body.run_id
+                        payload.dest, payload.run_id
                     )
                 }
                 Err(err) => {
-                    error!("Failed to extract destination archive with {body:?}: {err}");
+                    error!("Failed to extract destination archive with {payload:?}: {err}");
                 }
             }
 
@@ -190,12 +147,12 @@ async fn deploy(body: Body) {
         }
 
         {
-            let mut guard = PENDING_INFO.lock();
+            let mut guard = PENDING_PAYLOAD.lock();
             match guard.take() {
                 None => break 'worker_loop,
-                Some(pending_body) => {
-                    info!("Resolving pending deployment: {pending_body:?}");
-                    body = pending_body;
+                Some(pending_payload) => {
+                    info!("Resolving pending deployment: {pending_payload:?}");
+                    payload = pending_payload;
                 }
             }
         }
