@@ -1,19 +1,18 @@
 use async_zip::base::read::stream::ZipFileReader;
-use futures::io::AsyncWriteExt as _;
+use futures::io::{AsyncReadExt as _, AsyncWriteExt as _};
 use tokio_util::compat::TokioAsyncWriteCompatExt as _;
 
 use std::path::{Path, PathBuf};
 
-//help me solve imports i cant do that quick in live share due to ra limitations
-// ok
 /// Extracts the archive to a specified path.
-pub(crate) async fn extract_archive<R>(
+pub(crate) async fn extract_archive<R, P>(
     archive: ZipFileReader<async_zip::base::read::stream::Ready<R>>,
-    path: &str,
+    path: P,
     read_to_end: bool,
 ) -> async_zip::error::Result<()>
 where
     R: futures::io::AsyncBufRead + Unpin,
+    P: AsRef<Path>,
 {
     tokio::fs::remove_dir_all(&path).await?;
     tokio::fs::create_dir(&path).await?;
@@ -40,7 +39,7 @@ where
             a_ready = Some(a_reading.skip().await?);
             continue;
         };
-        let p = AsRef::<Path>::as_ref(&path).join(sanitize_file_path(name));
+        let p = path.as_ref().join(sanitize_file_path(name));
         if name.ends_with('/') {
             // Is a directory
             if !p.exists() {
@@ -63,6 +62,15 @@ where
             writer.flush().await?;
         }
         a_ready = Some(a_reading.done().await?);
+    }
+
+    if read_to_end {
+        a_ready
+            .unwrap()
+            .into_inner()
+            .await
+            .read_to_end(&mut Vec::new())
+            .await?;
     }
 
     Ok(())

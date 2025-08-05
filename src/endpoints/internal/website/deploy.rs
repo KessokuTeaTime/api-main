@@ -5,6 +5,7 @@ use async_zip::base::read::stream::ZipFileReader;
 use axum::{extract::Json, http::StatusCode, response::IntoResponse};
 use futures::stream::TryStreamExt as _;
 use parking_lot::Mutex;
+use sha2::Digest as _;
 use tokio_util::io::StreamReader;
 
 use serde::Deserialize;
@@ -99,6 +100,8 @@ async fn deploy(mut payload: Payload) {
                 State::Stop => break 'artifact_loop,
             };
 
+            let digest = artifact.digest.clone();
+
             // Downloads the artifact
             let stream = match download_artifact(artifact).await {
                 State::Success(stream) => {
@@ -115,34 +118,36 @@ async fn deploy(mut payload: Payload) {
                 State::Stop => break 'artifact_loop,
             };
 
-            // if hex::encode(Sha256::digest(&bytes)) != artifact.digest.unwrap()[7..] {
-            //     error!("Failed to match artifact's hash");
-            //     match retry_if_possible(&mut retry) {
-            //         Ok(_) => continue 'artifact_loop,
-            //         Err(_) => break 'artifact_loop,
-            //     }
-            // };
-
-            let zip_reader =
-                ZipFileReader::with_tokio(StreamReader::new(stream.map_err(io::Error::other)));
-            match crate::fs::extract_archive(
-                zip_reader,
-                &format!("/var/{}/html", &payload.dest),
-                true,
-            )
-            .await
-            {
+            let mut sha_hasher = sha2::Sha256::new();
+            let zip_reader = ZipFileReader::with_tokio(StreamReader::new(
+                stream
+                    .map_ok(|bytes| {
+                        sha_hasher.update(&bytes);
+                        bytes
+                    })
+                    .map_err(io::Error::other),
+            ));
+            let path = format!("/var/{}/html", &payload.dest);
+            let cleanup = async {
+                drop(tokio::fs::remove_dir_all(&path).await);
+            };
+            match crate::fs::extract_archive(zip_reader, &path, true).await {
                 Ok(_) => {
+                    if hex::encode(sha_hasher.finalize()) != digest.unwrap()[7..] {
+                        error!("Failed to match artifact's hash");
+                        cleanup.await;
+                        break 'artifact_loop;
+                    }
                     info!(
                         "Successfully deployed to {} with {}!",
                         payload.dest, payload.run_id
-                    )
+                    );
                 }
                 Err(err) => {
                     error!("Failed to extract destination archive with {payload:?}: {err}");
+                    cleanup.await;
                 }
             }
-
             break 'artifact_loop;
         }
 

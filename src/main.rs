@@ -9,16 +9,24 @@ use spdlog::info;
 use tokio::net::TcpListener;
 
 mod fs;
-mod gets;
-mod posts;
 mod state;
 mod workflow;
+
+mod endpoints;
+mod middlewares;
 
 const PORT: u16 = 8086;
 const MAX_RETRY: u8 = 5;
 
-static KTT_API_KEY: LazyLock<String> =
-    LazyLock::new(|| env::var("KTT_API_KEY").expect("KTT_API_KEY not set in environment"));
+/// The username of the API key.
+static KTT_API_USERNAME: LazyLock<String> = LazyLock::new(|| {
+    env::var("KTT_API_USERNAME").expect("KTT_API_USERNAME not set in environment")
+});
+/// The password of the API key.
+static KTT_API_PASSWORD: LazyLock<String> = LazyLock::new(|| {
+    env::var("KTT_API_PASSWORD").expect("KTT_API_PASSWORD not set in environment")
+});
+
 static GITHUB_TOKEN: LazyLock<String> =
     LazyLock::new(|| env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not set in environment"));
 
@@ -29,9 +37,7 @@ async fn main() {
     info!("Starting server on port {PORT}");
 
     let mut app = Router::new();
-
-    app = gets::route_from(app);
-    app = posts::route_from(app);
+    app = endpoints::route_from(app);
 
     let listener = TcpListener::bind(format!("0.0.0.0:{PORT}")).await.unwrap();
     axum::serve(
