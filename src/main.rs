@@ -22,7 +22,7 @@ const MAX_RETRY: u8 = 5;
 
 #[tokio::main]
 async fn main() {
-    dotenvy::dotenv().ok();
+    dotenvy::dotenv().unwrap();
     logging::setup().unwrap();
     info!("Starting server on port {PORT}");
 
