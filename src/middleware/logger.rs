@@ -12,9 +12,6 @@ pub(crate) async fn log_request(
     request: Request,
     next: Next,
 ) -> Response {
-    trace!(
-        addr = format!("{addr}"),
-        "Request received: {request:#?}"
-    );
+    trace!(addr = format!("{addr}"), "received request: {request:#?}");
     next.run(request).await
 }
