@@ -1,13 +1,14 @@
-//! KessokuTeaTime API backend._
+//! KessokuTeaTime API backend at `api.kessokuteatime.work`.
 
 #![allow(clippy::future_not_send)]
 
-use std::{env, net::SocketAddr, sync::LazyLock};
+use std::net::SocketAddr;
 
 use axum::Router;
 use spdlog::info;
 use tokio::net::TcpListener;
 
+mod env;
 mod fs;
 mod state;
 mod workflow;
@@ -17,18 +18,6 @@ mod middlewares;
 
 const PORT: u16 = 8086;
 const MAX_RETRY: u8 = 5;
-
-/// The username of the API key.
-static KTT_API_USERNAME: LazyLock<String> = LazyLock::new(|| {
-    env::var("KTT_API_USERNAME").expect("KTT_API_USERNAME not set in environment")
-});
-/// The password of the API key.
-static KTT_API_PASSWORD: LazyLock<String> = LazyLock::new(|| {
-    env::var("KTT_API_PASSWORD").expect("KTT_API_PASSWORD not set in environment")
-});
-
-static GITHUB_TOKEN: LazyLock<String> =
-    LazyLock::new(|| env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not set in environment"));
 
 #[tokio::main]
 async fn main() {

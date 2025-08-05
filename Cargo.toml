@@ -19,6 +19,7 @@ tokio = { version = "1.47", features = ["fs", "rt-multi-thread"] }
 tokio-util = { version = "0.7", features = ["io", "compat"] }
 sanitize-filename = "0.6"
 tower-http = { version = "0.6.6", features = ["auth"] }
+tracing = "0.1.41"
 
 [workspace.lints.rust]
 missing-docs = "warn"

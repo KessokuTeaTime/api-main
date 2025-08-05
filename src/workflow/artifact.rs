@@ -6,7 +6,7 @@ use serde::Deserialize;
 use spdlog::{error, info};
 use tokio_util::bytes::Bytes;
 
-use crate::{GITHUB_TOKEN, state::State, workflow::WorkflowRun};
+use crate::{env::GITHUB_TOKEN, state::State, workflow::WorkflowRun};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Artifacts {
