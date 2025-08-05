@@ -24,4 +24,4 @@ static_env!(expecting KTT_API_PASSWORD; "The password of the API key.");
 
 static_env!(expecting GITHUB_TOKEN);
 
-static_env!(expecting DIR_TRACING to "/temp"; "The directory for tracing files. Defaults to `/temp` if not specified.");
+static_env!(expecting DIR_TRACING to "/tmp"; "The directory for tracing files. Defaults to `/tmp` if not specified.");

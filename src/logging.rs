@@ -13,6 +13,7 @@ pub fn setup() -> Result<(), Error> {
         .with_writer(std::io::stdout);
     let rolling_file_layer = tracing_subscriber::fmt::layer().with_writer(
         RollingFileAppender::builder()
+            .filename_prefix("api")
             .filename_suffix("log")
             .build(&*DIR_TRACING)?,
     );
