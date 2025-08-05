@@ -26,6 +26,7 @@ async fn main() {
     logging::setup().unwrap();
 
     info!("Loaded environment: {:#?}", std::env::vars());
+    info!("{:?}", std::env::var("KTT_API_USERNAME"));
     info!("Starting server on port {PORT}");
 
     let mut app = Router::new();
