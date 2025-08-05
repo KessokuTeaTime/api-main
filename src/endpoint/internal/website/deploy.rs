@@ -89,7 +89,7 @@ async fn deploy(payload: Payload) {
         let result = index < latest_payload_index - 1;
         if result {
             warn!(
-                "{TRACING_REALM} Current payload index ({index}) is falling behind the latest one ({latest_payload_index}), exiting deployment!"
+                "{TRACING_REALM} Current payload index ({index}) is falling behind the latest one ({latest_payload_index}), exiting deployment with {payload}!"
             );
         }
         result
@@ -103,11 +103,11 @@ async fn deploy(payload: Payload) {
         // Fetches the artifact
         let artifact = match fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await {
             State::Success(artifact) => {
-                info!("{TRACING_REALM} Fetched artifact with {payload:?}");
+                info!("{TRACING_REALM} Fetched artifact with {payload}");
                 artifact
             }
             State::Retry => {
-                error!("{TRACING_REALM} Failed to fetch artifact with {payload:?}");
+                error!("{TRACING_REALM} Failed to fetch artifact with {payload}");
                 match retry_if_possible(&mut retry) {
                     Ok(_) => continue 'artifact_loop,
                     Err(_) => break 'artifact_loop,
@@ -124,11 +124,11 @@ async fn deploy(payload: Payload) {
         let digest = artifact.digest.clone();
         let stream = match download_artifact(artifact).await {
             State::Success(stream) => {
-                info!("{TRACING_REALM} Downloading artifact with {payload:?} ..");
+                info!("{TRACING_REALM} Downloading artifact with {payload} ..");
                 stream
             }
             State::Retry => {
-                error!("{TRACING_REALM} Failed to start download artifact with {payload:?}");
+                error!("{TRACING_REALM} Failed to start download artifact with {payload}");
                 match retry_if_possible(&mut retry) {
                     Ok(_) => continue 'artifact_loop,
                     Err(_) => break 'artifact_loop,
@@ -168,7 +168,7 @@ async fn deploy(payload: Payload) {
             }
             Err(err) => {
                 error!(
-                    "{TRACING_REALM} Failed to extract destination archive with {payload:?}: {err}"
+                    "{TRACING_REALM} Failed to extract destination archive with {payload}: {err}"
                 );
                 cleanup(false).await;
             }
