@@ -5,7 +5,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use tracing::{Level, event};
+use tracing::trace;
 
 const TRACING_REALM: &str = "[MIDDLEWARE] [LOGGER]";
 
@@ -14,11 +14,9 @@ pub(crate) async fn log_request(
     request: Request,
     next: Next,
 ) -> Response {
-    event!(
-        Level::TRACE,
+    trace!(
         addr = format!("{addr}"),
-        request = format!("{request:#?}"),
-        "{TRACING_REALM} Request received"
+        "{TRACING_REALM} Request received: {request:#?}"
     );
     next.run(request).await
 }
