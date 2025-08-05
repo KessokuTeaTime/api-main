@@ -1,0 +1,35 @@
+use anyhow::Error;
+use tracing::level_filters::LevelFilter;
+use tracing_appender::rolling::RollingFileAppender;
+use tracing_subscriber::{
+    Layer, fmt::time::ChronoLocal, layer::SubscriberExt, util::SubscriberInitExt,
+};
+
+use crate::env::DIR_TRACING;
+
+pub fn setup() -> Result<(), Error> {
+    let stderr_layer = tracing_subscriber::fmt::layer()
+        .pretty()
+        .with_writer(std::io::stdout);
+    let rolling_file_layer = tracing_subscriber::fmt::layer().pretty().with_writer(
+        RollingFileAppender::builder()
+            .filename_suffix("log")
+            .build(&*DIR_TRACING)?,
+    );
+
+    tracing_subscriber::registry()
+        .with(
+            stderr_layer
+                .with_timer(ChronoLocal::rfc_3339())
+                .with_filter(LevelFilter::DEBUG),
+        )
+        .with(
+            rolling_file_layer
+                .with_timer(ChronoLocal::rfc_3339())
+                .with_ansi(false)
+                .with_filter(LevelFilter::TRACE),
+        )
+        .try_init()?;
+
+    Ok(())
+}

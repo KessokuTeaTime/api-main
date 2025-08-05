@@ -3,10 +3,12 @@ use std::{error::Error, ops::Range};
 use futures::Stream;
 use reqwest::{RequestBuilder, header};
 use serde::Deserialize;
-use spdlog::{error, info};
 use tokio_util::bytes::Bytes;
+use tracing::{error, info};
 
 use crate::{env::GITHUB_TOKEN, state::State, workflow::WorkflowRun};
+
+const TRACING_REALM: &str = "[WORKFLOW]";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Artifacts {
@@ -55,7 +57,7 @@ pub async fn fetch_artifacts(
     let response = match github_api_request_builder(&url).send().await {
         Ok(response) => response,
         Err(err) => {
-            error!("Failed to fetch artifacts from {url}: {err}");
+            error!("[WORKFLOW] Failed to fetch artifacts from {url}: {err}");
             return match err {
                 _ if err.is_connect() || err.is_timeout() => State::Retry,
                 _ => State::Stop,
@@ -66,29 +68,29 @@ pub async fn fetch_artifacts(
     match response.json::<Artifacts>().await {
         Ok(json) => match json.total_count {
             0 => {
-                error!("Invalid workflow data: no artifacts at {url}!");
+                error!("{TRACING_REALM} Invalid workflow data: no artifacts at {url}!");
                 State::Stop
             }
             count => match count_range {
                 Some(count_range) => match count {
                     count if count < count_range.start => {
                         error!(
-                            "Invalid workflow data: too little artifacts at {url}! Expected {}~{}, got {count}",
+                            "{TRACING_REALM} Invalid workflow data: too little artifacts at {url}! Expected {}~{}, got {count}",
                             count_range.start, count_range.end
                         );
                         State::Stop
                     }
                     count if count > count_range.end => {
                         error!(
-                            "Invalid workflow data: too many artifacts at {url}! Expected {}~{}, got {count}",
+                            "{TRACING_REALM} Invalid workflow data: too many artifacts at {url}! Expected {}~{}, got {count}",
                             count_range.start, count_range.end
                         );
                         State::Stop
                     }
                     count => {
                         match count {
-                            1 => info!("Accepted 1 artifact from {url}"),
-                            count => info!("Accepted {count} artifacts from {url}"),
+                            1 => info!("{TRACING_REALM} Accepted 1 artifact from {url}"),
+                            count => info!("{TRACING_REALM} Accepted {count} artifacts from {url}"),
                         }
                         State::Success(json.artifacts)
                     }
@@ -97,7 +99,7 @@ pub async fn fetch_artifacts(
             },
         },
         Err(err) => {
-            error!("Failed to parse data from {url}: {err}");
+            error!("{TRACING_REALM} Failed to parse data from {url}: {err}");
 
             if let Some(source) = err.source() {
                 error!("{source}")
@@ -127,11 +129,11 @@ pub async fn download_artifact(
             let stream = resp.bytes_stream();
             match stream.size_hint() {
                 (min, Some(max)) => info!(
-                    "Downloaded artifact at {} with size {}..{}",
+                    "{TRACING_REALM} Downloaded artifact at {} with size {}..{}",
                     artifact.archive_download_url, min, max
                 ),
                 (min, None) => info!(
-                    "Downloaded artifact at {} with size >={}",
+                    "{TRACING_REALM} Downloaded artifact at {} with size >={}",
                     artifact.archive_download_url, min
                 ),
             }
@@ -139,19 +141,19 @@ pub async fn download_artifact(
         }
         Err(err) => match err.status() {
             Some(reqwest::StatusCode::GONE) => {
-                error!("Failed to download artifact: artifact expired or removed");
+                error!("{TRACING_REALM} Failed to download artifact: artifact expired or removed");
                 State::Stop
             }
             Some(status) => {
                 if let Some(reason) = status.canonical_reason() {
                     error!(
-                        "Failed to download artifact at {}: {} {reason}",
+                        "{TRACING_REALM} Failed to download artifact at {}: {} {reason}",
                         &artifact.archive_download_url,
                         status.as_u16()
                     );
                 } else {
                     error!(
-                        "Failed to download artifact at {}: {}",
+                        "{TRACING_REALM} Failed to download artifact at {}: {}",
                         &artifact.archive_download_url,
                         status.as_u16()
                     )
@@ -160,7 +162,7 @@ pub async fn download_artifact(
             }
             None => {
                 error!(
-                    "Failed to download artifact at {}",
+                    "{TRACING_REALM} Failed to download artifact at {}",
                     &artifact.archive_download_url
                 );
                 State::Retry

@@ -1,9 +1,10 @@
 use axum::{
     Router,
+    middleware::from_fn,
     routing::{get, post},
 };
 
-use crate::middlewares::auth::ktt_api_key_authorization_layer;
+use crate::middleware::auth::ktt_api_key_authorization_layer;
 
 mod health;
 mod internal;
@@ -11,7 +12,7 @@ mod internal;
 pub fn route_from(mut app: Router) -> Router {
     app = route_gets(app);
     app = route_posts(app);
-    app
+    app.layer(from_fn(crate::middleware::logger::log_request))
 }
 
 fn route_gets(app: Router) -> Router {

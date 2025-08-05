@@ -5,16 +5,17 @@
 use std::net::SocketAddr;
 
 use axum::Router;
-use spdlog::info;
 use tokio::net::TcpListener;
+use tracing::info;
 
 mod env;
 mod fs;
+mod logging;
 mod state;
 mod workflow;
 
-mod endpoints;
-mod middlewares;
+mod endpoint;
+mod middleware;
 
 const PORT: u16 = 8086;
 const MAX_RETRY: u8 = 5;
@@ -22,11 +23,11 @@ const MAX_RETRY: u8 = 5;
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
-    spdlog::default_logger().set_level_filter(spdlog::LevelFilter::All);
+    logging::setup().unwrap();
     info!("Starting server on port {PORT}");
 
     let mut app = Router::new();
-    app = endpoints::route_from(app);
+    app = endpoint::route_from(app);
 
     let listener = TcpListener::bind(format!("0.0.0.0:{PORT}")).await.unwrap();
     axum::serve(
