@@ -1,24 +1,21 @@
+use crate::KTT_API_KEY;
 use crate::state::{State, retry_if_possible};
-use crate::workflow::artifact::{Artifact, Artifacts};
-use crate::{GITHUB_TOKEN, KTT_API_KEY};
-use actix_web::web::Bytes;
+use crate::workflow::artifact::{download_artifact, fetch_artifact};
 use actix_web::{HttpRequest, HttpResponse, Responder, post, web};
 use async_zip::base::read::stream::ZipFileReader;
 use futures::stream::TryStreamExt;
 use parking_lot::Mutex;
-use reqwest::RequestBuilder;
-use reqwest::header;
+
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
+
 use spdlog::{debug, error, info, warn};
-use std::error::Error;
+
 use std::fmt::Display;
-use std::io::Cursor;
+
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{fs, io, thread};
 use tokio_util::io::StreamReader;
-use zip::ZipArchive;
 
 /// The pending [`WorkflowInfo`] to be deployed.
 static PENDING_INFO: LazyLock<Mutex<Option<WorkflowInfo>>> = LazyLock::new(|| Mutex::new(None));
@@ -110,62 +107,6 @@ async fn post(req: HttpRequest, info: web::Json<WorkflowInfo>) -> impl Responder
     HttpResponse::Ok().finish()
 }
 
-/// Builds a request for GitHub API
-fn github_api_request_builder(url: String) -> RequestBuilder {
-    reqwest::Client::new()
-        .get(url)
-        .header(header::ACCEPT, "application/vnd.github+json")
-        .bearer_auth(&*GITHUB_TOKEN)
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("User-Agent", "KessokuTeaTime-API/1.0")
-}
-
-/// Fetches the artifact corresponding to a run id
-async fn fetch_artifact(run_id: &str) -> State<Artifact> {
-    info!("Fetching artifact…");
-
-    let url = format!(
-        "https://api.github.com/repos/KessokuTeaTime/website/actions/runs/{run_id}/artifacts"
-    );
-
-    let response = match github_api_request_builder(url).send().await {
-        Ok(response) => response,
-        Err(err) => {
-            error!("Failed to fetch artifacts: {err}");
-            return match err {
-                _ if err.is_connect() || err.is_timeout() => State::Retry,
-                _ => State::Stop,
-            };
-        }
-    };
-
-    match response.json::<Artifacts>().await {
-        Ok(json) => match json.total_count {
-            0 => {
-                error!("Invalid workflow data: no artifacts!");
-                State::Stop
-            }
-            1 => {
-                info!("Artifact accepted");
-                State::Success(json.artifacts[0].clone())
-            }
-            _ => {
-                error!("Invalid workflow data: too many artifacts!");
-                State::Stop
-            }
-        },
-        Err(err) => {
-            error!("Failed to parse data: {err}");
-
-            if let Some(source) = err.source() {
-                error!("{source}")
-            }
-
-            State::Retry
-        }
-    }
-}
-
 /// Extracts the archive to a specified destination.
 async fn extract_archive<R>(archive: R, dest: &str) -> io::Result<()>
 where
@@ -191,7 +132,11 @@ async fn deploy(info: WorkflowInfo) {
 
         'artifact_loop: loop {
             // Fetches the artifact
-            let artifact = match fetch_artifact(&info.run_id).await {
+            let artifact = match fetch_artifact("KessokuTeaTime", "website", &info.run_id).await {
+                State::Success(artifact) => {
+                    info!("Fetched artifact with {info:?}");
+                    artifact
+                }
                 State::Retry => {
                     error!("Failed to fetch artifact with {info:?}");
                     match retry_if_possible(&mut retry) {
@@ -200,36 +145,22 @@ async fn deploy(info: WorkflowInfo) {
                     }
                 }
                 State::Stop => break 'artifact_loop,
-                State::Success(artifact) => {
-                    info!("Fetched artifact with {info:?}");
-                    artifact
-                }
             };
 
             // Downloads the artifact
-            let stream = match github_api_request_builder(artifact.archive_download_url)
-                .send()
-                .await
-            {
-                Ok(resp) => {
+            let stream = match download_artifact(artifact).await {
+                State::Success(stream) => {
                     info!("Downloaded artifact with {info:?}");
-                    resp.bytes_stream()
+                    stream
                 }
-                Err(err) => match err.status() {
-                    Some(reqwest::StatusCode::GONE) => {
-                        error!(
-                            "Failed to download artifact with {info:?}: artifact expired or removed"
-                        );
-                        break 'artifact_loop;
+                State::Retry => {
+                    error!("Failed to download artifact with {info:?}");
+                    match retry_if_possible(&mut retry) {
+                        Ok(_) => continue 'artifact_loop,
+                        Err(_) => break 'artifact_loop,
                     }
-                    _ => {
-                        error!("Failed to download artifact with {info:?}");
-                        match retry_if_possible(&mut retry) {
-                            Ok(_) => continue 'artifact_loop,
-                            Err(_) => break 'artifact_loop,
-                        }
-                    }
-                },
+                }
+                State::Stop => break 'artifact_loop,
             };
 
             // if hex::encode(Sha256::digest(&bytes)) != artifact.digest.unwrap()[7..] {
