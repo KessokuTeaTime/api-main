@@ -19,7 +19,10 @@ macro_rules! static_env {
     };
 }
 
-static_env!(expecting KTT_API_USERNAME; "The username of the API key.");
+pub static KTT_API_USERNAME: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    std::env::var("KTT_API_USERNAME").expect("KTT_API_USERNAME not set in environment")
+});
+// static_env!(expecting KTT_API_USERNAME; "The username of the API key.");
 static_env!(expecting KTT_API_PASSWORD; "The password of the API key.");
 
 static_env!(expecting GITHUB_TOKEN);
