@@ -1,5 +1,5 @@
 use async_zip::base::read::stream::ZipFileReader;
-use futures::io::{AsyncReadExt as _, AsyncWriteExt as _};
+use futures::io::AsyncWriteExt as _;
 use tokio_util::compat::TokioAsyncWriteCompatExt as _;
 
 use std::path::{Path, PathBuf};
@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 pub(crate) async fn extract_archive<R, P>(
     archive: ZipFileReader<async_zip::base::read::stream::Ready<R>>,
     path: P,
-    read_to_end: bool,
 ) -> async_zip::error::Result<()>
 where
     R: futures::io::AsyncBufRead + Unpin,
@@ -62,15 +61,6 @@ where
             writer.flush().await?;
         }
         a_ready = Some(a_reading.done().await?);
-    }
-
-    if read_to_end {
-        a_ready
-            .unwrap()
-            .into_inner()
-            .await
-            .read_to_end(&mut Vec::new())
-            .await?;
     }
 
     Ok(())

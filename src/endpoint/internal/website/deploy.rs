@@ -3,11 +3,11 @@ use crate::workflow::artifact::{download_artifact, fetch_artifact};
 
 use async_zip::base::read::stream::ZipFileReader;
 use axum::{extract::Json, http::StatusCode, response::IntoResponse};
+use futures::AsyncReadExt;
 use futures::stream::TryStreamExt as _;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use sha2::Digest as _;
-use tokio_util::io::StreamReader;
 use tracing::{debug, error, info, warn};
 
 use std::{
@@ -140,19 +140,19 @@ async fn deploy(payload: Payload) {
         }
 
         // Extracts the archive
-
         let mut sha_hasher = sha2::Sha256::new();
-        let zip_reader = ZipFileReader::with_tokio(StreamReader::new(
-            stream
-                .map_ok(|bytes| {
-                    sha_hasher.update(&bytes);
-                    bytes
-                })
-                .map_err(io::Error::other),
-        ));
-
-        match crate::fs::extract_archive(zip_reader, &path, true).await {
+        let mut read = stream
+            .map_ok(|bytes| {
+                sha_hasher.update(&bytes);
+                bytes
+            })
+            .map_err(io::Error::other)
+            .into_async_read();
+        match crate::fs::extract_archive(ZipFileReader::new(&mut read), &path).await {
             Ok(_) => {
+                // read to end for consuming whole buf to hasher, neglecting error
+                drop(read.read_to_end(&mut Vec::new()).await);
+
                 if hex::encode(sha_hasher.finalize()) == digest.unwrap()[7..] {
                     info!(
                         "successfully deployed to {} with {}!",

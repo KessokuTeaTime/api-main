@@ -14,7 +14,6 @@ zip = { version = "4.3.0", default-features = false, features = ["deflate"] }
 parking_lot = "0.12"
 futures = "0.3"
 async_zip = { version = "=0.0.17", features = [
-    "tokio",
     "async-compression",
     "deflate",
     "bzip2",
