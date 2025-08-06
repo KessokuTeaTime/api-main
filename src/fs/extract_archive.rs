@@ -14,7 +14,7 @@ where
     R: futures::io::AsyncBufRead + Unpin,
     P: AsRef<Path>,
 {
-    tokio::fs::remove_dir_all(&path).await?;
+    drop(tokio::fs::remove_dir_all(&path).await);
     tokio::fs::create_dir(&path).await?;
 
     let mut a_ready = Some(archive);
