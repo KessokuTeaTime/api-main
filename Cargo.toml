@@ -13,7 +13,7 @@ sha2 = "0.10.9"
 zip = { version = "4.3.0", default-features = false, features = ["deflate"] }
 parking_lot = "0.12"
 futures = "0.3"
-async_zip = { version = "*", features = ["tokio"] }
+async_zip = { version = "=0.0.17", features = ["tokio", "async-compression", "deflate"] }
 tokio = { version = "1.47", features = ["fs", "rt-multi-thread", "sync"] }
 tokio-util = { version = "0.7", features = ["io", "compat"] }
 sanitize-filename = "0.6"
