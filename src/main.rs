@@ -6,7 +6,7 @@ use std::net::SocketAddr;
 
 use axum::Router;
 use tokio::net::TcpListener;
-use tracing::info;
+use tracing::{info, trace};
 
 mod env;
 mod fs;
@@ -25,8 +25,8 @@ async fn main() {
     dotenvy::dotenv().ok();
     logging::setup().unwrap();
 
-    info!("Loaded environment: {:#?}", std::env::vars());
-    info!("Starting server on port {PORT}");
+    trace!("loaded environment: {:#?}", std::env::vars());
+    info!("starting server on port {PORT}");
 
     let mut app = Router::new();
     app = endpoint::route_from(app);

@@ -4,7 +4,7 @@ use futures::Stream;
 use reqwest::{RequestBuilder, header};
 use serde::Deserialize;
 use tokio_util::bytes::Bytes;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{env::GITHUB_TOKEN, state::State, workflow::WorkflowRun};
 
@@ -47,10 +47,17 @@ pub async fn fetch_artifacts(
     run_id: &str,
     count_range: Option<Range<u8>>,
 ) -> State<Vec<Artifact>> {
-    info!("Fetching artifact…");
-
     let url =
         format!("https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/artifacts");
+    match &count_range {
+        Some(Range { start: 1, end: 2 }) => debug!("fetching 1 artifact from {url}…"),
+        Some(count_range) => debug!(
+            "fetching {} to {} artifacts from {url}…",
+            count_range.start,
+            count_range.end - 1
+        ),
+        None => debug!("fetching artifacts from {url}…"),
+    }
 
     let response = match github_api_request_builder(&url).send().await {
         Ok(response) => response,
@@ -69,19 +76,21 @@ pub async fn fetch_artifacts(
                 error!("invalid workflow data: no artifacts at {url}!");
                 State::Stop
             }
-            count => match count_range {
+            count => match &count_range {
                 Some(count_range) => match count {
                     count if count < count_range.start => {
                         error!(
                             "invalid workflow data: too little artifacts at {url}! expected {}~{}, got {count}",
-                            count_range.start, count_range.end
+                            count_range.start,
+                            count_range.end - 1
                         );
                         State::Stop
                     }
-                    count if count > count_range.end => {
+                    count if count >= count_range.end => {
                         error!(
                             "invalid workflow data: too many artifacts at {url}! expected {}~{}, got {count}",
-                            count_range.start, count_range.end
+                            count_range.start,
+                            count_range.end - 1
                         );
                         State::Stop
                     }
@@ -110,7 +119,7 @@ pub async fn fetch_artifacts(
 
 /// Fetches the only artifact using the given parameters
 pub async fn fetch_artifact(owner: &str, repo: &str, run_id: &str) -> State<Artifact> {
-    fetch_artifacts(owner, repo, run_id, None)
+    fetch_artifacts(owner, repo, run_id, Some(1..2))
         .await
         .map(|artifacts| artifacts[0].clone())
 }
@@ -119,6 +128,11 @@ pub async fn fetch_artifact(owner: &str, repo: &str, run_id: &str) -> State<Arti
 pub async fn download_artifact(
     artifact: Artifact,
 ) -> State<impl Stream<Item = Result<Bytes, reqwest::Error>>> {
+    debug!(
+        "downloading artifact from {}…",
+        &artifact.archive_download_url
+    );
+
     match github_api_request_builder(&artifact.archive_download_url)
         .send()
         .await

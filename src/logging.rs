@@ -1,11 +1,11 @@
 use anyhow::Error;
 use tracing::level_filters::LevelFilter;
-use tracing_appender::rolling::RollingFileAppender;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     Layer, fmt::time::ChronoLocal, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
-use crate::env::DIR_TRACING;
+use crate::env::{TRACING_DIR, TRACING_MAX_FILES};
 
 pub fn setup() -> Result<(), Error> {
     let stderr_layer = tracing_subscriber::fmt::layer()
@@ -13,9 +13,10 @@ pub fn setup() -> Result<(), Error> {
         .with_writer(std::io::stdout);
     let rolling_file_layer = tracing_subscriber::fmt::layer().with_writer(
         RollingFileAppender::builder()
-            .filename_prefix("api")
             .filename_suffix("log")
-            .build(&*DIR_TRACING)?,
+            .rotation(Rotation::DAILY)
+            .max_log_files(*TRACING_MAX_FILES)
+            .build(&*TRACING_DIR)?,
     );
 
     tracing_subscriber::registry()

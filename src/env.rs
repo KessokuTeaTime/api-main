@@ -1,5 +1,7 @@
 use std::env;
 
+use anyhow::anyhow;
+
 macro_rules! static_lazy_lock {
     ($name:ident: $type:ty = $expr:expr $(; $doc:expr)?) => {
         $(#[doc=$doc])?
@@ -20,6 +22,10 @@ static_lazy_lock!(
     GITHUB_TOKEN: String = env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not set in environment")
 );
 static_lazy_lock!(
-    DIR_TRACING: String = env::var("DIR_TRACING").unwrap_or("/tmp".to_owned());
-    "The directory for tracing files. Defaults to `/tmp` if not specified."
+    TRACING_MAX_FILES: usize = env::var("TRACING_MAX_FILES").map_err(|e| anyhow!(e)).and_then(|s| s.parse::<usize>().map_err(|e| anyhow!(e))).unwrap_or(5);
+    "The maximum file count to use for tracing."
+);
+static_lazy_lock!(
+    TRACING_DIR: String = env::var("TRACING_DIR").unwrap_or("/tmp/api/tracing".to_owned());
+    "The directory for tracing files. Defaults to `/tmp/api/tracing` if not specified."
 );

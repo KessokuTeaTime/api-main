@@ -122,7 +122,7 @@ async fn deploy(payload: Payload) {
         let digest = artifact.digest.clone();
         let stream = match download_artifact(artifact).await {
             State::Success(stream) => {
-                info!("downloading artifact with {payload} ..");
+                info!("downloaded artifact with {payload}");
                 stream
             }
             State::Retry => {
