@@ -132,6 +132,7 @@ where
         }
     }
 }
+
 impl<'a, V, R> Transaction<'a, V, State<R>>
 where
     V: Send + 'a,
