@@ -1,6 +1,7 @@
 //! KessokuTeaTime API backend at `api.kessokuteatime.work`.
 
 #![feature(fn_traits)]
+#![feature(async_fn_traits)]
 #![feature(unboxed_closures)]
 #![allow(clippy::future_not_send)]
 

@@ -46,7 +46,7 @@ impl QueuedAsyncFrameworkContext {
 pub struct QueuedAsyncFramework<'a, ID, V>
 where
     ID: Eq + Hash,
-    V: Clone,
+    V: Clone + Send,
 {
     businesses: LazyLock<Mutex<HashMap<ID, Arc<BusinessHolder>>>>,
     transaction_builder:
@@ -56,7 +56,7 @@ where
 impl<ID, V> Debug for QueuedAsyncFramework<'_, ID, V>
 where
     ID: Eq + Hash + Debug,
-    V: Clone + Debug,
+    V: Clone + Send + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QueuedAsyncFramework")
@@ -69,7 +69,7 @@ where
 impl<'a, ID, V> QueuedAsyncFramework<'a, ID, V>
 where
     ID: Eq + Hash,
-    V: Clone,
+    V: Clone + Send,
 {
     pub fn new<B>(builder: B) -> Self
     where
@@ -85,7 +85,7 @@ where
 impl<ID, V> QueuedAsyncFramework<'_, ID, V>
 where
     ID: Eq + Hash,
-    V: Clone,
+    V: Clone + Send,
 {
     pub async fn run(&self, id: ID, payload: V)
     where
@@ -109,7 +109,7 @@ where
             }
 
             let transaction = (self.transaction_builder)(&context);
-            match transaction.run(payload.clone()) {
+            match transaction.run(payload.clone()).await {
                 State::Success(_) => {
                     holder
                         .latest_payload_index
