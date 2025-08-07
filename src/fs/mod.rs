@@ -1,3 +1,3 @@
-mod extract_archive;
+pub mod extract_archive;
 
 pub use extract_archive::extract_archive;

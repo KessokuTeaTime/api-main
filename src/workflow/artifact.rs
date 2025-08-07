@@ -1,4 +1,4 @@
-use std::{error::Error, ops::Range};
+use std::error::Error;
 
 use futures::Stream;
 use reqwest::{RequestBuilder, header};
@@ -6,7 +6,7 @@ use serde::Deserialize;
 use tokio_util::bytes::Bytes;
 use tracing::{debug, error, info};
 
-use crate::{env::GITHUB_TOKEN, state::State, workflow::WorkflowRun};
+use crate::{env::GITHUB_TOKEN, framework::state::State, workflow::WorkflowRun};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Artifacts {

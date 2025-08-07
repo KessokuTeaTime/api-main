@@ -8,17 +8,16 @@ use axum::Router;
 use tokio::net::TcpListener;
 use tracing::{info, trace};
 
-mod env;
-mod fs;
-mod logging;
-mod state;
-mod workflow;
+use crate::env::PORT;
 
-mod endpoint;
-mod middleware;
+pub mod env;
+pub mod framework;
+pub mod fs;
+pub mod logging;
+pub mod workflow;
 
-const PORT: u16 = 8086;
-const MAX_RETRY: u8 = 5;
+pub mod endpoint;
+pub mod middleware;
 
 #[tokio::main]
 async fn main() {
@@ -26,12 +25,14 @@ async fn main() {
     logging::setup().unwrap();
 
     trace!("loaded environment: {:#?}", std::env::vars());
-    info!("starting server on port {PORT}");
+    info!("starting server on port {}", *PORT);
 
     let mut app = Router::new();
     app = endpoint::route_from(app);
 
-    let listener = TcpListener::bind(format!("0.0.0.0:{PORT}")).await.unwrap();
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", *PORT))
+        .await
+        .unwrap();
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),

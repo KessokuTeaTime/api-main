@@ -6,8 +6,8 @@ use axum::{
 
 use crate::middleware::{auth::layers::ktt_api_key_authorization, logger::log_request};
 
-mod health;
-mod internal;
+pub mod health;
+pub(crate) mod internal;
 
 pub fn route_from(mut app: Router) -> Router {
     app = route_gets(app);

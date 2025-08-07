@@ -11,6 +11,10 @@ macro_rules! static_lazy_lock {
 }
 
 static_lazy_lock!(
+    PORT: u16 = env::var("PORT").map_err(|e| anyhow!(e)).and_then(|s| s.parse::<u16>().map_err(|e| anyhow!(e))).expect("PORT not set in environment");
+    "The port to listen to."
+);
+static_lazy_lock!(
     KTT_API_USERNAME: String = env::var("KTT_API_USERNAME").expect("KTT_API_USERNAME not set in environment");
     "The username of the API key."
 );
@@ -19,7 +23,12 @@ static_lazy_lock!(
     "The password of the API key."
 );
 static_lazy_lock!(
-    GITHUB_TOKEN: String = env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not set in environment")
+    GITHUB_TOKEN: String = env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not set in environment");
+    "The GitHub token."
+);
+static_lazy_lock!(
+    MAX_RETRY: u8 = env::var("MAX_RETRY").map_err(|e| anyhow!(e)).and_then(|s| s.parse::<u8>().map_err(|e| anyhow!(e))).unwrap_or(5);
+    "The maximum retry limit for transactions."
 );
 static_lazy_lock!(
     TRACING_MAX_FILES: usize = env::var("TRACING_MAX_FILES").map_err(|e| anyhow!(e)).and_then(|s| s.parse::<usize>().map_err(|e| anyhow!(e))).unwrap_or(5);

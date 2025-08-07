@@ -1,6 +1,6 @@
 use tracing::{error, warn};
 
-use crate::MAX_RETRY;
+use crate::env::MAX_RETRY;
 
 pub enum State<T> {
     Retry,
@@ -23,11 +23,11 @@ impl<T> State<T> {
 
 pub fn retry_if_possible(retry: &mut u8) -> Result<(), ()> {
     *retry += 1;
-    if *retry > MAX_RETRY {
-        error!("retried for too many times ({MAX_RETRY}), stopping!");
+    if *retry > *MAX_RETRY {
+        error!("retried for too many times ({}), stopping!", *MAX_RETRY);
         Err(())
     } else {
-        warn!("retrying… ({retry} / {MAX_RETRY})");
+        warn!("retrying… ({retry} / {})", *MAX_RETRY);
         Ok(())
     }
 }

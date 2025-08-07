@@ -1,4 +1,4 @@
-use crate::state::{State, retry_if_possible};
+use crate::framework::state::{State, retry_if_possible};
 use crate::workflow::artifact::{download_artifact, fetch_artifact};
 
 use async_zip::base::read::stream::ZipFileReader;
