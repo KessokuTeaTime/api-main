@@ -40,22 +40,18 @@ pub fn github_api_request_builder(url: &str) -> RequestBuilder {
         .header("User-Agent", "KessokuTeaTime-API/1.0")
 }
 
-/// Fetches possible artifacts using the given parameters
+/// Fetches artifacts using the given parameters
 pub async fn fetch_artifacts(
     owner: &str,
     repo: &str,
     run_id: &str,
-    count_range: Option<Range<u8>>,
+    count: Option<u8>,
 ) -> State<Vec<Artifact>> {
     let url =
         format!("https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/artifacts");
-    match &count_range {
-        Some(Range { start: 1, end: 2 }) => debug!("fetching 1 artifact from {url}…"),
-        Some(count_range) => debug!(
-            "fetching {} to {} artifacts from {url}…",
-            count_range.start,
-            count_range.end - 1
-        ),
+    match &count {
+        Some(1) => debug!("fetching 1 artifact from {url}…"),
+        Some(count) => debug!("fetching {count} artifacts from {url}…"),
         None => debug!("fetching artifacts from {url}…"),
     }
 
@@ -76,28 +72,24 @@ pub async fn fetch_artifacts(
                 error!("invalid workflow data: no artifacts at {url}!");
                 State::Stop
             }
-            count => match &count_range {
-                Some(count_range) => match count {
-                    count if count < count_range.start => {
+            total_count => match &count {
+                Some(count) => match total_count {
+                    total_count if total_count < *count => {
                         error!(
-                            "invalid workflow data: too little artifacts at {url}! expected {}~{}, got {count}",
-                            count_range.start,
-                            count_range.end - 1
+                            "invalid workflow data: too little artifacts at {url}! expected {count}, got {total_count}"
                         );
                         State::Stop
                     }
-                    count if count >= count_range.end => {
+                    total_count if total_count > *count => {
                         error!(
-                            "invalid workflow data: too many artifacts at {url}! expected {}~{}, got {count}",
-                            count_range.start,
-                            count_range.end - 1
+                            "invalid workflow data: too many artifacts at {url}! expected {count}, got {total_count}",
                         );
                         State::Stop
                     }
-                    count => {
-                        match count {
-                            1 => info!("accepted 1 artifact from {url}"),
-                            count => info!("accepted {count} artifacts from {url}"),
+                    total_count => {
+                        match total_count {
+                            1 => info!("fetched 1 artifact from {url}"),
+                            count => info!("fetched {count} artifacts from {url}"),
                         }
                         State::Success(json.artifacts)
                     }
@@ -119,7 +111,7 @@ pub async fn fetch_artifacts(
 
 /// Fetches the only artifact using the given parameters
 pub async fn fetch_artifact(owner: &str, repo: &str, run_id: &str) -> State<Artifact> {
-    fetch_artifacts(owner, repo, run_id, Some(1..2))
+    fetch_artifacts(owner, repo, run_id, Some(1))
         .await
         .map(|artifacts| artifacts[0].clone())
 }

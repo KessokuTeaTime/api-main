@@ -126,7 +126,7 @@ async fn deploy(payload: Payload) {
                 stream
             }
             State::Retry => {
-                error!("failed to start download artifact with {payload}");
+                error!("failed to download artifact with {payload}");
                 match retry_if_possible(&mut retry) {
                     Ok(_) => continue 'artifact_loop,
                     Err(_) => break 'artifact_loop,

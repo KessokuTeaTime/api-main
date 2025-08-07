@@ -5,7 +5,7 @@ use tokio_util::compat::TokioAsyncWriteCompatExt as _;
 use std::path::{Path, PathBuf};
 
 /// Extracts the archive to a specified path.
-pub(crate) async fn extract_archive<R, P>(
+pub async fn extract_archive<R, P>(
     archive: ZipFileReader<async_zip::base::read::stream::Ready<R>>,
     path: P,
 ) -> async_zip::error::Result<()>

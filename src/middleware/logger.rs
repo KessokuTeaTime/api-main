@@ -7,7 +7,7 @@ use axum::{
 };
 use tracing::trace;
 
-pub(crate) async fn log_request(
+pub async fn log_request(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     request: Request,
     next: Next,

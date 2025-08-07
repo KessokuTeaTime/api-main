@@ -4,7 +4,7 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::middleware::auth::ktt_api_key_authorization_layer;
+use crate::middleware::{auth::layers::ktt_api_key_authorization, logger::log_request};
 
 mod health;
 mod internal;
@@ -12,7 +12,7 @@ mod internal;
 pub fn route_from(mut app: Router) -> Router {
     app = route_gets(app);
     app = route_posts(app);
-    app.layer(from_fn(crate::middleware::logger::log_request))
+    app.layer(from_fn(log_request))
 }
 
 fn route_gets(app: Router) -> Router {
@@ -22,6 +22,6 @@ fn route_gets(app: Router) -> Router {
 fn route_posts(app: Router) -> Router {
     app.route(
         "/internal/website/deploy",
-        post(internal::website::deploy::post).route_layer(ktt_api_key_authorization_layer()),
+        post(internal::website::deploy::post).route_layer(ktt_api_key_authorization()),
     )
 }
