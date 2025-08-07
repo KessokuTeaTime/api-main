@@ -1,7 +1,8 @@
 use crate::framework::queued_async::QueuedAsyncFramework;
 use crate::framework::state::{State, retry_if_possible};
 use crate::framework::transaction::Transaction;
-use crate::workflow::artifact::{download_artifact, fetch_artifact};
+use crate::transaction;
+use crate::workflow::artifact::{Artifact, download_artifact, fetch_artifact};
 
 use async_zip::base::read::stream::ZipFileReader;
 use axum::{extract::Json, http::StatusCode, response::IntoResponse};
@@ -12,6 +13,7 @@ use serde::Deserialize;
 use sha2::Digest as _;
 use tracing::{debug, error, info, warn};
 
+use std::pin::Pin;
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -33,9 +35,11 @@ static FS_BUSINESSES: LazyLock<Mutex<HashMap<PathBuf, Arc<BusinessHolder>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 thread_local! {
 static FRAMEWORK: QueuedAsyncFramework<'static, String, Payload> =
-    QueuedAsyncFramework::new(|cx| Transaction::create(|payload: Payload| {
-        fetch_artifact("KessokuTeaTime", "website", &payload.run_id)
-    }));
+    QueuedAsyncFramework::new(|cx| Transaction::create(transaction!(|payload: Payload| -> State<Artifact> {
+        fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await
+    })).map_next(transaction!(|artifact: Artifact| -> State<()> {
+        State::Stop
+    })));
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -49,6 +53,8 @@ impl Display for Payload {
         f.write_fmt(format_args!("{}<~{}", self.dest, self.run_id))
     }
 }
+
+unsafe impl Send for Payload {}
 
 impl Payload {
     pub fn validate(self) -> Self {

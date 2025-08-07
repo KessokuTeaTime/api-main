@@ -2,6 +2,17 @@ use std::{fmt::Debug, pin::Pin};
 
 use crate::framework::state::State;
 
+#[macro_export]
+macro_rules! transaction {
+    (|$($name:ident: $type: ty),+| -> $output:ty {$body:expr}) => {
+        move |$($name: $type,)+| -> std::pin::Pin<Box<dyn Future<Output=$output> + Send>> {
+            Box::pin(async move {
+                $body
+            })
+        }
+    };
+}
+
 pub struct Transaction<'a, V, R>
 where
     V: Send,
@@ -61,14 +72,12 @@ where
         R: 'a,
     {
         Transaction {
-            function: Box::new(
-                move |v: V| -> Pin<Box<dyn Future<Output = N> + Send + 'a>> {
-                    Box::pin(async move {
-                        let r = (self.function).async_call_once((v,)).await;
-                        op(r).await
-                    })
-                },
-            ),
+            function: Box::new(transaction!(|v: V| -> N {
+                {
+                    let r = (self.function).async_call_once((v,)).await;
+                    op(r).await
+                }
+            })),
         }
     }
 }
@@ -90,18 +99,16 @@ where
         R: 'a,
     {
         Transaction {
-            function: Box::new(
-                move |v: V| -> Pin<Box<dyn Future<Output = State<N>> + Send + 'a>> {
-                    Box::pin(async move {
-                        let r = (self.function).async_call_once((v,)).await;
-                        match r {
-                            State::Success(r) => op(r).await,
-                            State::Retry => State::Retry,
-                            State::Stop => State::Stop,
-                        }
-                    })
-                },
-            ),
+            function: Box::new(transaction!(|v: V| -> State<N> {
+                {
+                    let r = (self.function).async_call_once((v,)).await;
+                    match r {
+                        State::Success(r) => op(r).await,
+                        State::Retry => State::Retry,
+                        State::Stop => State::Stop,
+                    }
+                }
+            })),
         }
     }
 }
