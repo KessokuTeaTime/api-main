@@ -1,4 +1,6 @@
+use crate::framework::queued_async::QueuedAsyncFramework;
 use crate::framework::state::{State, retry_if_possible};
+use crate::framework::transaction::Transaction;
 use crate::workflow::artifact::{download_artifact, fetch_artifact};
 
 use async_zip::base::read::stream::ZipFileReader;
@@ -29,6 +31,12 @@ struct BusinessHolder {
 
 static FS_BUSINESSES: LazyLock<Mutex<HashMap<PathBuf, Arc<BusinessHolder>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
+thread_local! {
+static FRAMEWORK: QueuedAsyncFramework<'static, String, Payload> =
+    QueuedAsyncFramework::new(|cx| Transaction::create(|payload: Payload| {
+        fetch_artifact("KessokuTeaTime", "website", &payload.run_id)
+    }));
+}
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Payload {
@@ -56,6 +64,7 @@ impl Payload {
 
 /// Responds to a website deployment request
 pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
+    let path = format!("/var/{}/html", &payload.dest);
     tokio::spawn(deploy(payload.clone().validate()));
     StatusCode::OK
 }

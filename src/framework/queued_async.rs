@@ -43,18 +43,20 @@ impl QueuedAsyncFrameworkContext {
     }
 }
 
-pub struct QueuedAsyncFramework<'a, V>
+pub struct QueuedAsyncFramework<'a, ID, V>
 where
-    V: Eq + Hash + Clone,
+    ID: Eq + Hash,
+    V: Clone,
 {
-    businesses: LazyLock<Mutex<HashMap<V, Arc<BusinessHolder>>>>,
+    businesses: LazyLock<Mutex<HashMap<ID, Arc<BusinessHolder>>>>,
     transaction_builder:
         Box<dyn for<'r> Fn(&'r QueuedAsyncFrameworkContext) -> Transaction<'r, V, State<()>> + 'a>,
 }
 
-impl<V> Debug for QueuedAsyncFramework<'_, V>
+impl<ID, V> Debug for QueuedAsyncFramework<'_, ID, V>
 where
-    V: Eq + Hash + Clone + Debug,
+    ID: Eq + Hash + Debug,
+    V: Clone + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QueuedAsyncFramework")
@@ -64,9 +66,10 @@ where
     }
 }
 
-impl<'a, V> QueuedAsyncFramework<'a, V>
+impl<'a, ID, V> QueuedAsyncFramework<'a, ID, V>
 where
-    V: Eq + Hash + Clone,
+    ID: Eq + Hash,
+    V: Clone,
 {
     pub fn new<B>(builder: B) -> Self
     where
@@ -79,20 +82,16 @@ where
     }
 }
 
-impl<V> QueuedAsyncFramework<'_, V>
+impl<ID, V> QueuedAsyncFramework<'_, ID, V>
 where
-    V: Eq + Hash + Clone,
+    ID: Eq + Hash,
+    V: Clone,
 {
-    pub async fn run(&self, payload: V)
+    pub async fn run(&self, id: ID, payload: V)
     where
         V: Display,
     {
-        let holder = self
-            .businesses
-            .lock()
-            .entry(payload.clone())
-            .or_default()
-            .clone();
+        let holder = self.businesses.lock().entry(id).or_default().clone();
         let index = holder.latest_payload_index.fetch_add(1, Ordering::SeqCst);
         let context: QueuedAsyncFrameworkContext = QueuedAsyncFrameworkContext {
             payload_display: format!("{}", &payload),
@@ -111,7 +110,12 @@ where
 
             let transaction = (self.transaction_builder)(&context);
             match transaction.run(payload.clone()) {
-                State::Success(_) => info!("transaction succeed with payload {}!", &payload),
+                State::Success(_) => {
+                    holder
+                        .latest_payload_index
+                        .store(u8::default(), Ordering::SeqCst);
+                    info!("transaction succeed with payload {}!", &payload)
+                }
                 State::Retry => match retry_if_possible(&mut retry) {
                     Ok(_) => continue,
                     Err(_) => break,
