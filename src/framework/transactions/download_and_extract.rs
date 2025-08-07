@@ -1,7 +1,6 @@
-use crate::{
-    framework::{FrameworkContext, state::State},
-    workflow::artifact::Artifact,
-};
+use std::fmt::Display;
+
+use crate::{framework::State, workflow::artifact::Artifact};
 
 use anyhow::{Error, anyhow};
 use async_zip::base::read::stream::ZipFileReader;
@@ -18,36 +17,19 @@ enum Case {
     HashUnmatch,
 }
 
-pub struct Input<V> {
-    pub passthrough: V,
-    pub artifact: Artifact,
-    pub path: String,
-}
-
-pub struct Output<V> {
-    pub passthrough: V,
-}
-
-pub async fn run<Cx, V>(
-    cx: &Cx,
-    Input {
-        passthrough,
-        artifact,
-        path,
-    }: Input<V>,
-) -> State<Output<V>>
+pub async fn run<V>(payload: V, artifact: Artifact, path: &str) -> State<()>
 where
-    Cx: FrameworkContext,
+    V: Clone + Display,
 {
     match crate::workflow::artifact::download_artifact(&artifact).await {
         State::Success(stream) => {
-            info!("downloading artifact with {}…", cx.payload_display());
+            info!("downloading artifact with {payload}…",);
             let case = extract_archive(stream, artifact.digest.as_deref(), &path).await;
-            cleanup(cx, case, &path).await;
-            State::Success(Output { passthrough })
+            cleanup(payload.clone(), case, &path).await;
+            State::Success(())
         }
         State::Retry => {
-            error!("failed to download artifact with {}", cx.payload_display());
+            error!("failed to download artifact with {payload}",);
             State::Retry
         }
         State::Stop => State::Stop,
@@ -81,18 +63,18 @@ where
     }
 }
 
-async fn cleanup<Cx>(cx: &Cx, case: Case, path: &str)
+async fn cleanup<V>(payload: V, case: Case, path: &str)
 where
-    Cx: FrameworkContext,
+    V: Display,
 {
     match case {
-        Case::Deployed => info!("successfully deployed {}!", cx.payload_display()),
+        Case::Deployed => info!("successfully deployed {payload}!"),
         Case::HashUnmatch => {
-            error!("failed to deploy {}: broken artifact", cx.payload_display());
+            error!("failed to deploy {payload}: broken artifact",);
             drop(remove_dir_all(&path).await);
         }
         Case::Failed(err) => {
-            error!("failed to deploy{}: {err}", cx.payload_display());
+            error!("failed to deploy{payload}: {err}",);
             drop(remove_dir_all(&path).await);
         }
     }

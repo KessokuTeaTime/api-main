@@ -1,37 +1,37 @@
-use crate::framework::{
-    queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext},
-    state::State,
-    transaction::{
-        Transaction,
-        global::{download_artifact, fetch_artifact},
-        transaction,
+use crate::{
+    framework::{
+        State,
+        queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
+        transactions::download_and_extract,
     },
+    workflow::artifact::fetch_artifact,
 };
 
 use axum::{extract::Json, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use std::{fmt::Display, sync::LazyLock};
 
-mod fetch_to_download;
+// static FRAMEWORK: LazyLock<QueuedAsyncFramework<'static, String, Payload>> = LazyLock::new(|| {
+//     QueuedAsyncFramework::new(|cx| {
+//         Transaction::create(transaction! {
+//             |input: fetch_artifact::Input<Payload>| -> State<fetch_artifact::Output<Payload>>;
+//             cx => await fetch_artifact::run::<QueuedAsyncFrameworkContext, Payload>
+//         })
+//         .and_then(cx.check_transaction())
+//         .map_next(transaction! {
+//             |input: fetch_to_download::Input| -> State<fetch_to_download::Output>;
+//             await fetch_to_download::run
+//         })
+//         .map_next(transaction! {
+//             |input: download_artifact::Input<Payload>| -> State<download_artifact::Output<Payload>>;
+//             cx => await download_artifact::run::<QueuedAsyncFrameworkContext, Payload>
+//         })
+//         .map_next_become(())
+//     })
+// });
 
-static FRAMEWORK: LazyLock<QueuedAsyncFramework<'static, String, Payload>> = LazyLock::new(|| {
-    QueuedAsyncFramework::new(|cx| {
-        Transaction::create(transaction! {
-            |input: fetch_artifact::Input<Payload>| -> State<fetch_artifact::Output<Payload>>;
-            cx => await fetch_artifact::run::<QueuedAsyncFrameworkContext, Payload>
-        })
-        .and_then(cx.check_transaction())
-        .map_next(transaction! {
-            |input: fetch_to_download::Input| -> State<fetch_to_download::Output>;
-            await fetch_to_download::run
-        })
-        .map_next(transaction! {
-            |input: download_artifact::Input<Payload>| -> State<download_artifact::Output<Payload>>;
-            cx => await download_artifact::run::<QueuedAsyncFrameworkContext, Payload>
-        })
-        .map_next_become(())
-    })
-});
+static FRAMEWORK: LazyLock<QueuedAsyncFramework<String>> =
+    LazyLock::new(|| QueuedAsyncFramework::new());
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Payload {
@@ -46,15 +46,6 @@ impl Display for Payload {
 }
 
 unsafe impl Send for Payload {}
-
-impl From<Payload> for fetch_artifact::Input<Payload> {
-    fn from(payload: Payload) -> Self {
-        Self {
-            passthrough: payload.clone(),
-            run_id: payload.run_id,
-        }
-    }
-}
 
 impl Payload {
     pub fn validate(self) -> Self {
@@ -73,6 +64,16 @@ impl Payload {
 }
 
 pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
-    tokio::spawn(FRAMEWORK.run(payload.clone().dest, payload.clone().validate()));
+    let payload = payload.validate();
+    tokio::spawn(FRAMEWORK.run(payload.dest.clone(), payload.clone(), |cx| {
+        Box::pin(transaction(cx.clone()))
+    }));
     StatusCode::OK
+}
+
+async fn transaction(cx: QueuedAsyncFrameworkContext<Payload>) -> State<()> {
+    let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "website", &cx.payload.run_id).await);
+    unwrap!(cx.check());
+    unwrap!(download_and_extract::run(cx.payload.clone(), artifact, &cx.payload.path()).await);
+    State::Success(())
 }

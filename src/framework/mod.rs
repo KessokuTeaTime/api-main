@@ -1,7 +1,6 @@
-pub mod queued_async;
-pub mod state;
-pub mod transaction;
+mod state;
 
-pub trait FrameworkContext {
-    fn payload_display(&self) -> &str;
-}
+pub mod queued_async;
+pub mod transactions;
+
+pub use state::*;
