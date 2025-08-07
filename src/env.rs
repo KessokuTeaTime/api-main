@@ -1,6 +1,5 @@
-use std::env;
-
 use anyhow::anyhow;
+use std::env;
 
 macro_rules! static_lazy_lock {
     ($name:ident: $type:ty = $expr:expr $(; $doc:expr)?) => {

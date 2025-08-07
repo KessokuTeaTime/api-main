@@ -1,30 +1,31 @@
-use std::{fmt::Debug, pin::Pin};
-
 use crate::framework::state::State;
+
+use std::{fmt::Debug, pin::Pin};
 
 #[macro_export]
 macro_rules! transaction {
-    (|$($name:ident: $type: ty),+| -> $output:ty {$body:expr}) => {
+    (|$($name:ident: $type: ty),+| -> $output:ty; $body:expr) => {
         move |$($name: $type,)+| -> std::pin::Pin<Box<dyn Future<Output=$output> + Send>> {
             Box::pin(async move {
                 $body
             })
         }
     };
+    (|$($name:ident: $type: ty),+| -> $output:ty; $($($var:expr),+ =>)? await $func:path) => {
+        transaction!(|$($name: $type),+| -> $output; $func($($($var,)+)? $($name),+).await)
+    }
 }
+
+pub use transaction;
+
+pub trait TransactionFunction<'a, V, R> = AsyncFnOnce<(V,), Output = R, CallOnceFuture = Pin<Box<dyn Future<Output = R> + Send + 'a>>>
+    + Send;
 
 pub struct Transaction<'a, V, R>
 where
     V: Send,
 {
-    function: Box<
-        dyn AsyncFnOnce<
-                (V,),
-                Output = R,
-                CallOnceFuture = Pin<Box<dyn Future<Output = R> + Send + 'a>>,
-            > + Send
-            + 'a,
-    >,
+    pub(crate) function: Box<dyn TransactionFunction<'a, V, R> + 'a>,
 }
 
 impl<V, R> Debug for Transaction<'_, V, R>
@@ -37,78 +38,87 @@ where
             .finish()
     }
 }
+impl<'a, V, R> Transaction<'a, V, R>
+where
+    V: Send,
+{
+    pub fn create<F, In>(op: F) -> Self
+    where
+        F: TransactionFunction<'a, In, R> + 'a,
+        V: Into<In> + 'a,
+    {
+        Transaction {
+            function: Box::new(transaction! {
+                |v: V| -> R;
+                {
+                    op(v.into()).await
+                }
+            }),
+        }
+    }
+}
 
 impl<'a, V, R> Transaction<'a, V, R>
 where
     V: Send,
 {
-    pub fn create<F>(op: F) -> Self
-    where
-        F: AsyncFnOnce<
-                (V,),
-                Output = R,
-                CallOnceFuture = Pin<Box<dyn Future<Output = R> + Send + 'a>>,
-            > + Send
-            + 'a,
-    {
-        Transaction {
-            function: Box::new(op),
-        }
-    }
-
     pub async fn run(self, payload: V) -> R {
         (self.function).async_call_once((payload,)).await
     }
 
-    pub fn next<F, N>(self, op: F) -> Transaction<'a, V, N>
+    pub fn next<F, In, Out>(self, op: F) -> Transaction<'a, V, Out>
     where
-        F: AsyncFnOnce<
-                (R,),
-                Output = N,
-                CallOnceFuture = Pin<Box<dyn Future<Output = N> + Send + 'a>>,
-            > + Send
-            + 'a,
+        F: TransactionFunction<'a, In, Out> + 'a,
         V: 'a,
-        R: 'a,
+        R: Into<In> + 'a,
     {
         Transaction {
-            function: Box::new(transaction!(|v: V| -> N {
+            function: Box::new(transaction! {
+                |v: V| -> Out;
                 {
                     let r = (self.function).async_call_once((v,)).await;
-                    op(r).await
+                    op(r.into()).await
                 }
-            })),
+            }),
         }
     }
 }
 
 impl<'a, V, R> Transaction<'a, V, State<R>>
 where
-    V: Send,
-    R: Send,
+    V: Send + 'a,
+    R: Send + 'a,
 {
-    pub fn map_next<F, N>(self, op: F) -> Transaction<'a, V, State<N>>
+    pub fn map_next<F, In, Out>(self, op: F) -> Transaction<'a, V, State<Out>>
     where
-        F: AsyncFnOnce<
-                (R,),
-                Output = State<N>,
-                CallOnceFuture = Pin<Box<dyn Future<Output = State<N>> + Send + 'a>>,
-            > + Send
-            + 'a,
-        V: 'a,
-        R: 'a,
+        F: TransactionFunction<'a, In, State<Out>> + 'a,
+        R: Into<In>,
     {
         Transaction {
-            function: Box::new(transaction!(|v: V| -> State<N> {
+            function: Box::new(transaction! {
+                |v: V| -> State<Out>;
                 {
                     let r = (self.function).async_call_once((v,)).await;
                     match r {
-                        State::Success(r) => op(r).await,
+                        State::Success(r) => op(r.into()).await,
                         State::Retry => State::Retry,
                         State::Stop => State::Stop,
                     }
                 }
-            })),
+            }),
         }
+    }
+}
+
+impl<'a, V, R> Transaction<'a, V, R>
+where
+    V: Send + 'a,
+    R: Send + 'a,
+{
+    pub fn and_then<N>(self, transaction: Transaction<'a, R, N>) -> Transaction<'a, V, N>
+    where
+        N: 'a,
+    {
+        self.next(transaction.function)
     }
 }

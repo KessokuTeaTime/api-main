@@ -1,16 +1,19 @@
-use async_zip::base::read::stream::ZipFileReader;
-use futures::io::AsyncWriteExt as _;
+use async_zip::{
+    base::read::stream::{Ready, ZipFileReader},
+    error::ZipError,
+};
+use futures::io::{AsyncBufRead, AsyncWriteExt as _};
 use tokio_util::compat::TokioAsyncWriteCompatExt as _;
 
 use std::path::{Path, PathBuf};
 
 /// Extracts the archive to a specified path.
 pub async fn extract_archive<R, P>(
-    archive: ZipFileReader<async_zip::base::read::stream::Ready<R>>,
+    archive: ZipFileReader<Ready<R>>,
     path: P,
-) -> async_zip::error::Result<()>
+) -> Result<(), ZipError>
 where
-    R: futures::io::AsyncBufRead + Unpin,
+    R: AsyncBufRead + Unpin,
     P: AsRef<Path>,
 {
     drop(tokio::fs::remove_dir_all(&path).await);

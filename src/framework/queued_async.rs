@@ -1,3 +1,11 @@
+use crate::{
+    framework::{
+        state::{State, retry_if_possible},
+        transaction::Transaction,
+    },
+    transaction,
+};
+
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
@@ -10,11 +18,6 @@ use std::{
 
 use parking_lot::Mutex;
 use tracing::{error, info, warn};
-
-use crate::framework::{
-    state::{State, retry_if_possible},
-    transaction::Transaction,
-};
 
 #[derive(Debug, Default)]
 struct BusinessHolder {
@@ -41,6 +44,21 @@ impl QueuedAsyncFrameworkContext {
         }
         result
     }
+
+    pub fn check_transaction<'a, V>(&'a self) -> Transaction<'a, State<V>, State<V>>
+    where
+        V: Send + 'a,
+    {
+        Transaction {
+            function: Box::new(transaction!(|state: State<V>| -> State<V>; {
+                if self.should_exit() {
+                    State::Stop
+                } else {
+                    state
+                }
+            })),
+        }
+    }
 }
 
 pub struct QueuedAsyncFramework<'a, ID, V>
@@ -49,8 +67,12 @@ where
     V: Clone + Send,
 {
     businesses: LazyLock<Mutex<HashMap<ID, Arc<BusinessHolder>>>>,
-    transaction_builder:
-        Box<dyn for<'r> Fn(&'r QueuedAsyncFrameworkContext) -> Transaction<'r, V, State<()>> + 'a>,
+    transaction_builder: Box<
+        dyn for<'r> Fn(&'r QueuedAsyncFrameworkContext) -> Transaction<'r, V, State<()>>
+            + Send
+            + Sync
+            + 'a,
+    >,
 }
 
 impl<ID, V> Debug for QueuedAsyncFramework<'_, ID, V>
@@ -73,7 +95,10 @@ where
 {
     pub fn new<B>(builder: B) -> Self
     where
-        B: for<'r> Fn(&'r QueuedAsyncFrameworkContext) -> Transaction<'r, V, State<()>> + 'a,
+        B: for<'r> Fn(&'r QueuedAsyncFrameworkContext) -> Transaction<'r, V, State<()>>
+            + Send
+            + Sync
+            + 'a,
     {
         QueuedAsyncFramework {
             businesses: LazyLock::new(|| Mutex::new(HashMap::new())),

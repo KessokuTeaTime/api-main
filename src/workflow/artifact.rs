@@ -118,8 +118,8 @@ pub async fn fetch_artifact(owner: &str, repo: &str, run_id: &str) -> State<Arti
 
 // Downloads the specified artifact
 pub async fn download_artifact(
-    artifact: Artifact,
-) -> State<impl Stream<Item = Result<Bytes, reqwest::Error>>> {
+    artifact: &Artifact,
+) -> State<impl Stream<Item = Result<Bytes, reqwest::Error>> + use<>> {
     debug!(
         "downloading artifact from {}…",
         &artifact.archive_download_url

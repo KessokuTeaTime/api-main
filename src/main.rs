@@ -3,6 +3,7 @@
 #![feature(fn_traits)]
 #![feature(async_fn_traits)]
 #![feature(unboxed_closures)]
+#![feature(trait_alias)]
 #![allow(clippy::future_not_send)]
 
 use std::net::SocketAddr;
