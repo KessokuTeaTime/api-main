@@ -25,6 +25,7 @@ static FRAMEWORK: LazyLock<QueuedAsyncFramework<'static, String, Payload>> = Laz
             |input: download_artifact::Input| -> State<download_artifact::Output>;
             cx => await download_artifact::run
         })
+        .and_then(cx.check_transaction())
         .map_next(transaction! {
             |input: cleanup::Input| -> State<cleanup::Output>;
             cx => await cleanup::run
