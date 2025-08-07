@@ -1,35 +1,35 @@
 use crate::framework::{
-    queued_async::QueuedAsyncFramework,
+    queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext},
     state::State,
-    transaction::{Transaction, transaction},
+    transaction::{
+        Transaction,
+        global::{download_artifact, fetch_artifact},
+        transaction,
+    },
 };
 
 use axum::{extract::Json, http::StatusCode, response::IntoResponse};
-
 use serde::Deserialize;
-
 use std::{fmt::Display, sync::LazyLock};
 
-mod cleanup;
-mod download_artifact;
-mod fetch_artifact;
+mod fetch_to_download;
 
 static FRAMEWORK: LazyLock<QueuedAsyncFramework<'static, String, Payload>> = LazyLock::new(|| {
     QueuedAsyncFramework::new(|cx| {
         Transaction::create(transaction! {
-            |input: fetch_artifact::Input| -> State<fetch_artifact::Output>;
-            cx => await fetch_artifact::run
+            |input: fetch_artifact::Input<Payload>| -> State<fetch_artifact::Output<Payload>>;
+            cx => await fetch_artifact::run::<QueuedAsyncFrameworkContext, Payload>
         })
         .and_then(cx.check_transaction())
         .map_next(transaction! {
-            |input: download_artifact::Input| -> State<download_artifact::Output>;
-            cx => await download_artifact::run
+            |input: fetch_to_download::Input| -> State<fetch_to_download::Output>;
+            await fetch_to_download::run
         })
-        .and_then(cx.check_transaction())
         .map_next(transaction! {
-            |input: cleanup::Input| -> State<cleanup::Output>;
-            cx => await cleanup::run
+            |input: download_artifact::Input<Payload>| -> State<download_artifact::Output<Payload>>;
+            cx => await download_artifact::run::<QueuedAsyncFrameworkContext, Payload>
         })
+        .map_next_become(())
     })
 });
 
@@ -46,6 +46,15 @@ impl Display for Payload {
 }
 
 unsafe impl Send for Payload {}
+
+impl From<Payload> for fetch_artifact::Input<Payload> {
+    fn from(payload: Payload) -> Self {
+        Self {
+            passthrough: payload.clone(),
+            run_id: payload.run_id,
+        }
+    }
+}
 
 impl Payload {
     pub fn validate(self) -> Self {

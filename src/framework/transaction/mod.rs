@@ -2,6 +2,8 @@ use crate::framework::state::State;
 
 use std::{fmt::Debug, pin::Pin};
 
+pub mod global;
+
 #[macro_export]
 macro_rules! transaction {
     (|$($name:ident: $type: ty),+| -> $output:ty; $body:expr) => {
@@ -84,6 +86,27 @@ where
     }
 }
 
+impl<'a, V, R> Transaction<'a, V, R>
+where
+    V: Send + 'a,
+    R: 'a,
+{
+    pub fn next_become<N>(self, value: N) -> Transaction<'a, V, N>
+    where
+        N: Send + 'a,
+    {
+        Transaction {
+            function: Box::new(transaction! {
+                |v: V| -> N;
+                {
+                    drop((self.function).async_call_once((v,)).await);
+                    value
+                }
+            }),
+        }
+    }
+}
+
 impl<'a, V, R> Transaction<'a, V, State<R>>
 where
     V: Send + 'a,
@@ -101,6 +124,30 @@ where
                     let r = (self.function).async_call_once((v,)).await;
                     match r {
                         State::Success(r) => op(r.into()).await,
+                        State::Retry => State::Retry,
+                        State::Stop => State::Stop,
+                    }
+                }
+            }),
+        }
+    }
+}
+impl<'a, V, R> Transaction<'a, V, State<R>>
+where
+    V: Send + 'a,
+    R: 'a,
+{
+    pub fn map_next_become<N>(self, value: N) -> Transaction<'a, V, State<N>>
+    where
+        N: Send + 'a,
+    {
+        Transaction {
+            function: Box::new(transaction! {
+                |v: V| -> State<N>;
+                {
+                    let r = (self.function).async_call_once((v,)).await;
+                    match r {
+                        State::Success(_) => State::Success(value),
                         State::Retry => State::Retry,
                         State::Stop => State::Stop,
                     }

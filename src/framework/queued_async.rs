@@ -1,9 +1,7 @@
-use crate::{
-    framework::{
-        state::{State, retry_if_possible},
-        transaction::Transaction,
-    },
-    transaction,
+use super::{
+    FrameworkContext,
+    state::{State, retry_if_possible},
+    transaction::{Transaction, transaction},
 };
 
 use std::{
@@ -32,6 +30,12 @@ pub struct QueuedAsyncFrameworkContext {
     pub holder: Arc<BusinessHolder>,
 }
 
+impl FrameworkContext for QueuedAsyncFrameworkContext {
+    fn payload_display(&self) -> &str {
+        &self.payload_display
+    }
+}
+
 impl QueuedAsyncFrameworkContext {
     pub fn should_exit(&self) -> bool {
         let latest_payload_index = &self.holder.latest_payload_index.load(Ordering::SeqCst);
@@ -50,13 +54,16 @@ impl QueuedAsyncFrameworkContext {
         V: Send + 'a,
     {
         Transaction {
-            function: Box::new(transaction!(|state: State<V>| -> State<V>; {
-                if self.should_exit() {
-                    State::Stop
-                } else {
-                    state
+            function: Box::new(transaction! {
+                |state: State<V>| -> State<V>;
+                {
+                    if self.should_exit() {
+                        State::Stop
+                    } else {
+                        state
+                    }
                 }
-            })),
+            }),
         }
     }
 }
@@ -116,15 +123,23 @@ where
     where
         V: Display,
     {
+        self.run_with_display(id, payload.clone(), format!("{}", payload.clone()))
+            .await
+    }
+
+    pub async fn run_with_display(&self, id: ID, payload: V, payload_display: String) {
         let holder = self.businesses.lock().entry(id).or_default().clone();
         let index = holder.latest_payload_index.fetch_add(1, Ordering::SeqCst);
         let context: QueuedAsyncFrameworkContext = QueuedAsyncFrameworkContext {
-            payload_display: format!("{}", &payload),
+            payload_display: payload_display.clone(),
             index,
             holder: holder.clone(),
         };
 
-        info!("starting transaction loop with payload {}…", &payload);
+        info!(
+            "starting transaction loop with payload {}…",
+            payload_display
+        );
         let mut retry: u8 = 0;
         let _guard = holder.lock.lock().await;
 
@@ -139,13 +154,13 @@ where
                     holder
                         .latest_payload_index
                         .store(u8::default(), Ordering::SeqCst);
-                    info!("transaction succeed with payload {}!", &payload)
+                    info!("transaction succeed with payload {}!", payload_display)
                 }
                 State::Retry => match retry_if_possible(&mut retry) {
                     Ok(_) => continue,
                     Err(_) => break,
                 },
-                State::Stop => error!("transaction failure with payload {}!", &payload),
+                State::Stop => error!("transaction failure with payload {}!", payload_display),
             }
         }
     }
