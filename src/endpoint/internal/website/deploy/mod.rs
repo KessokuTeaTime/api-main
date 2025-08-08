@@ -6,15 +6,17 @@ use crate::{
         queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
         transactions::download_and_extract,
     },
+    static_lazy_lock,
     workflow::artifact::fetch_artifact,
 };
 
 use axum::{extract::Json, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
-use std::{fmt::Display, sync::LazyLock};
+use std::fmt::Display;
 
-static FRAMEWORK: LazyLock<QueuedAsyncFramework<PayloadDestination>> =
-    LazyLock::new(QueuedAsyncFramework::new);
+static_lazy_lock! {
+    FRAMEWORK: QueuedAsyncFramework<PayloadDestination> = QueuedAsyncFramework::new();
+}
 
 /// Posts a website deployment request.
 /// Responds with [`StatusCode::OK`] right after the deployment is triggered.
@@ -62,7 +64,7 @@ impl Display for PayloadDestination {
 }
 
 /// The payload of the post.
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Payload {
     /// The run id of the GitHub workflow.
     pub run_id: String,
