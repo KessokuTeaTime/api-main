@@ -1,3 +1,5 @@
-pub mod extract_archive;
+//! Some file system utilities.
 
-pub use extract_archive::extract_archive;
+mod extract_archive;
+
+pub use extract_archive::*;

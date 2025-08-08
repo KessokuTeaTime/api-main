@@ -1,3 +1,5 @@
+//! A framework that loops transactions until the max retry times is reached, or a stop signal is received, or a value is returned.
+
 use super::{State, retry_if_possible};
 
 use std::{
@@ -13,6 +15,24 @@ use std::{
 
 use tracing::{error, info, warn};
 
+/// Unwraps a [`State`] to control the loop of a [`QueuedAsyncFramework`]. This macro accepts a [`State`] value, returns the current scope if the value is either [`State::Retry`] or [`State::Stop`], and exposes the data if the value is [`State::Success`].
+///
+/// # Examples
+///
+/// ```rust
+/// let value = unwrap!(State::Success(42));
+/// assert!(value == 42);
+///
+/// fn scope() -> State<()> {
+///     // This line returns the function with a `State::<()>::Stop` immediately
+///     let value: i32 = unwrap!(State::Stop);
+///
+///     // This line will never be executed
+///     State::Success(())
+/// }
+///
+/// assert!(scope() == State::Stop);
+/// ```
 #[macro_export]
 macro_rules! unwrap {
     ($expr:expr) => {
@@ -60,7 +80,12 @@ where
     }
 }
 
-#[derive(Debug)]
+/// A framework that loops transactions until the max retry times is reached, or a stop signal is received, or a value is returned.
+///
+/// This framework ensures that the latest business is always executed. The ongoing business should check itself constantly in case a newer business arrives. This is achieved through an index that grows with collapsing businesses, and the [`QueuedAsyncFrameworkContext::check`] function along with the [`unwrap`] macro.
+///
+/// See: [`example`], [`unwrap`]
+#[derive(Debug, Default)]
 pub struct QueuedAsyncFramework<ID>
 where
     ID: Eq + Hash,
@@ -72,6 +97,7 @@ impl<ID> QueuedAsyncFramework<ID>
 where
     ID: Eq + Hash,
 {
+    /// Creates a [`QueuedAsyncFramework`].
     pub fn new() -> Self {
         Self {
             businesses: LazyLock::new(|| parking_lot::Mutex::new(HashMap::new())),
@@ -83,6 +109,7 @@ impl<ID> QueuedAsyncFramework<ID>
 where
     ID: Eq + Hash,
 {
+    /// Runs transactions asynchronously with a payload. The `id` is used to distinguish between businesses.
     pub async fn run<V, F>(&self, id: ID, payload: V, f: F)
     where
         V: Clone + Display + Send,
@@ -123,5 +150,38 @@ where
                 State::Stop => error!("transaction failure with payload {payload}!",),
             }
         }
+    }
+}
+
+#[tokio::test]
+async fn example() {
+    // Defines a framework
+    // This leverages `LazyLock` to generate a static value
+    static FRAMEWORK: LazyLock<QueuedAsyncFramework<i32>> =
+        LazyLock::new(QueuedAsyncFramework::new);
+
+    // Runs the transaction inside the framework
+    FRAMEWORK
+        .run(42, String::from("payload"), |cx| {
+            // Pinboxes the transaction and clone the context
+            Box::pin(transaction(cx.clone()))
+        })
+        .await;
+
+    async fn transaction(cx: QueuedAsyncFrameworkContext<String>) -> State<()> {
+        // Checks if a newer business exist, and stops executing if so
+        unwrap!(cx.check());
+
+        // Any logic returning a `State` can be unwrapped...
+        let greeting = unwrap!(greet().await);
+        // ...while `State::Retry` and `State::Stop` can control the loop directly
+        assert!(greeting == "42!");
+
+        // To exit successfully...
+        State::Success(())
+    }
+
+    async fn greet() -> State<String> {
+        State::Success(String::from("42!"))
     }
 }

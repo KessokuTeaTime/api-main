@@ -1,6 +1,8 @@
-use std::fmt::Display;
-
-use crate::{framework::State, workflow::artifact::Artifact};
+use crate::{
+    framework::State,
+    fs::extract_archive,
+    workflow::artifact::{Artifact, download_artifact},
+};
 
 use anyhow::{Error, anyhow};
 use async_zip::base::read::stream::ZipFileReader;
@@ -17,26 +19,26 @@ enum Case {
     HashUnmatch,
 }
 
-pub async fn run<V>(payload: V, artifact: Artifact, path: &str) -> State<()>
-where
-    V: Clone + Display,
-{
-    match crate::workflow::artifact::download_artifact(&artifact).await {
+/// Downloads an [`Artifact`] and extracts the downloaded archive to a specified path.
+///
+/// See: [`download_artifact`], [`extract_archive`]
+pub async fn download_and_extract(artifact: Artifact, path: &str) -> State<()> {
+    match download_artifact(&artifact).await {
         State::Success(stream) => {
-            info!("downloading artifact with {payload}…",);
-            let case = extract_archive(stream, artifact.digest.as_deref(), &path).await;
-            cleanup(payload.clone(), case, &path).await;
+            info!("downloading artifact with {artifact}…",);
+            let case = extract(stream, artifact.digest.as_deref(), path).await;
+            cleanup(artifact.clone(), case, path).await;
             State::Success(())
         }
         State::Retry => {
-            error!("failed to download artifact with {payload}",);
+            error!("failed to download artifact with {artifact}",);
             State::Retry
         }
         State::Stop => State::Stop,
     }
 }
 
-async fn extract_archive<S>(stream: S, digest: Option<&str>, path: &str) -> Case
+async fn extract<S>(stream: S, digest: Option<&str>, path: &str) -> Case
 where
     S: Stream<Item = Result<Bytes, reqwest::Error>> + Unpin,
 {
@@ -48,7 +50,7 @@ where
         })
         .map_err(std::io::Error::other)
         .into_async_read();
-    match crate::fs::extract_archive(ZipFileReader::new(&mut read), path).await {
+    match extract_archive(ZipFileReader::new(&mut read), path).await {
         Ok(_) => {
             // Reads to end for consuming whole buf to hasher, neglecting the error
             drop(read.read_to_end(&mut Vec::new()).await);
@@ -63,19 +65,16 @@ where
     }
 }
 
-async fn cleanup<V>(payload: V, case: Case, path: &str)
-where
-    V: Display,
-{
+async fn cleanup(artifact: Artifact, case: Case, path: &str) {
     match case {
-        Case::Deployed => info!("successfully deployed {payload}!"),
+        Case::Deployed => info!("successfully deployed {artifact}!"),
         Case::HashUnmatch => {
-            error!("failed to deploy {payload}: broken artifact",);
-            drop(remove_dir_all(&path).await);
+            error!("failed to deploy {artifact}: broken artifact",);
+            drop(remove_dir_all(path).await);
         }
         Case::Failed(err) => {
-            error!("failed to deploy{payload}: {err}",);
-            drop(remove_dir_all(&path).await);
+            error!("failed to deploy {artifact}: {err}",);
+            drop(remove_dir_all(path).await);
         }
     }
 }

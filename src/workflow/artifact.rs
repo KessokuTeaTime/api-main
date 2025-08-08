@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Display};
 
 use futures::Stream;
 use reqwest::{RequestBuilder, header};
@@ -28,6 +28,16 @@ pub struct Artifact {
     pub updated_at: Option<String>,
     pub digest: Option<String>,
     pub workflow_run: Option<WorkflowRun>,
+}
+
+impl Display for Artifact {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} ({} at {})",
+            self.name, self.id, self.archive_download_url
+        )
+    }
 }
 
 /// Builds a request for GitHub API
