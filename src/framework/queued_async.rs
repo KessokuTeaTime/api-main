@@ -52,26 +52,24 @@ struct BusinessHolder {
     latest_payload_index: AtomicU8,
 }
 
+/// Provides extra information for a [`QueuedAsyncFrameworkContext`] business.
 #[derive(Debug, Clone)]
-pub struct QueuedAsyncFrameworkContext<V>
-where
-    V: Display,
-{
+pub struct QueuedAsyncFrameworkContext {
+    /// The index of the current business. Can be used to determine if a newer business exist.
     pub index: u8,
-    pub payload: V,
+    /// The name of the current business. Can be used by loggers to distinguish between businesses.
+    pub name: String,
     holder: Arc<BusinessHolder>,
 }
 
-impl<V> QueuedAsyncFrameworkContext<V>
-where
-    V: Display,
-{
+impl QueuedAsyncFrameworkContext {
+    /// Checks if the current business is the latest, and returns a corresponding [`State<()>`] that can be directly unwrapped using [`unwrap`].
     pub fn check(&self) -> State<()> {
         let latest_payload_index = &self.holder.latest_payload_index.load(Ordering::SeqCst);
         if self.index < latest_payload_index - 1 {
             warn!(
-                "current payload index ({}) is falling behind the latest one ({latest_payload_index}), exiting deployment with {}!",
-                &self.index, &self.payload
+                "current payload index ({}) is falling behind the latest one ({latest_payload_index}), exiting deployment {}!",
+                &self.index, &self.name
             );
             State::Success(())
         } else {
@@ -109,23 +107,36 @@ impl<ID> QueuedAsyncFramework<ID>
 where
     ID: Eq + Hash,
 {
-    /// Runs transactions asynchronously with a payload. The `id` is used to distinguish between businesses.
-    pub async fn run<V, F>(&self, id: ID, payload: V, f: F)
+    /// Runs transactions asynchronously with a distinguishable id. The name of the business will be the display format of the id.
+    ///
+    /// See: [`Self::run_with_name`]
+    pub async fn run<F>(&self, id: ID, f: F)
     where
-        V: Clone + Display + Send,
-        F: Fn(QueuedAsyncFrameworkContext<V>) -> Pin<Box<dyn Future<Output = State<()>> + Send>>
+        ID: Display,
+        F: Fn(QueuedAsyncFrameworkContext) -> Pin<Box<dyn Future<Output = State<()>> + Send>>
+            + Send
+            + Sync,
+    {
+        let name = format!("{}", &id);
+        self.run_with_name(id, name, f).await
+    }
+
+    /// Runs transactions asynchronously with a distinguishable id and a name.
+    pub async fn run_with_name<F>(&self, id: ID, name: String, f: F)
+    where
+        F: Fn(QueuedAsyncFrameworkContext) -> Pin<Box<dyn Future<Output = State<()>> + Send>>
             + Send
             + Sync,
     {
         let holder = self.businesses.lock().entry(id).or_default().clone();
         let index = holder.latest_payload_index.fetch_add(1, Ordering::SeqCst);
-        let context: QueuedAsyncFrameworkContext<V> = QueuedAsyncFrameworkContext {
+        let context: QueuedAsyncFrameworkContext = QueuedAsyncFrameworkContext {
             index,
-            payload: payload.clone(),
+            name: name.clone(),
             holder: holder.clone(),
         };
 
-        info!("starting transaction with payload {payload}…",);
+        info!("starting transaction {name}…");
         let mut retry: u8 = 0;
         let _guard = holder.lock.lock().await;
 
@@ -141,13 +152,13 @@ where
                     holder
                         .latest_payload_index
                         .store(u8::default(), Ordering::SeqCst);
-                    info!("transaction succeed with payload {payload}!",);
+                    info!("transaction {name} succeed!");
                 }
                 State::Retry => match retry_if_possible(&mut retry) {
                     Ok(_) => continue,
                     Err(_) => break,
                 },
-                State::Stop => error!("transaction failure with payload {payload}!",),
+                State::Stop => error!("transaction {name} failed!"),
             }
         }
     }
@@ -162,13 +173,13 @@ async fn example() {
 
     // Runs the transaction inside the framework
     FRAMEWORK
-        .run(42, String::from("payload"), |cx| {
+        .run(42, |cx| {
             // Pinboxes the transaction and clone the context
             Box::pin(transaction(cx.clone()))
         })
         .await;
 
-    async fn transaction(cx: QueuedAsyncFrameworkContext<String>) -> State<()> {
+    async fn transaction(cx: QueuedAsyncFrameworkContext) -> State<()> {
         // Checks if a newer business exist, and stops executing if so
         unwrap!(cx.check());
 

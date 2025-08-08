@@ -1,3 +1,5 @@
+//! Defines the environment variables to use.
+
 use anyhow::anyhow;
 use std::env;
 

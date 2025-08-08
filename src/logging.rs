@@ -1,3 +1,5 @@
+//! The logging component of the server.
+
 use anyhow::Error;
 use tracing::level_filters::LevelFilter;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -7,6 +9,13 @@ use tracing_subscriber::{
 
 use crate::env::{TRACING_DIR, TRACING_MAX_FILES};
 
+/// Setup the logging component, which contains a stderr layer and a rolling file layer.
+///
+/// # Errors
+///
+/// Returns an error if the setup progress failed.
+///
+/// See: [`TRACING_DIR`], [`TRACING_MAX_FILES`], [`tracing`]
 pub fn setup() -> Result<(), Error> {
     let stderr_layer = tracing_subscriber::fmt::layer()
         .pretty()

@@ -1,3 +1,5 @@
+//! The framework for APIs.
+
 mod state;
 
 pub mod queued_async;

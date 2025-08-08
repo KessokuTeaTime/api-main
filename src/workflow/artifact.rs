@@ -1,3 +1,5 @@
+//! Artifacts from GitHub REST API and related functions.
+
 use std::{error::Error, fmt::Display};
 
 use futures::Stream;
@@ -8,12 +10,14 @@ use tracing::{debug, error, info};
 
 use crate::{env::GITHUB_TOKEN, framework::State, workflow::WorkflowRun};
 
+/// Represents artifacts from GitHub REST API.
 #[derive(Debug, Deserialize, Clone)]
 pub struct Artifacts {
     pub total_count: u8,
     pub artifacts: Vec<Artifact>,
 }
 
+/// Represents an artifact from GitHub REST API.
 #[derive(Debug, Deserialize, Clone)]
 pub struct Artifact {
     pub id: u64,
@@ -40,7 +44,7 @@ impl Display for Artifact {
     }
 }
 
-/// Builds a request for GitHub API
+/// Builds a request for GitHub REST API.
 pub fn github_api_request_builder(url: &str) -> RequestBuilder {
     reqwest::Client::new()
         .get(url)
@@ -50,7 +54,7 @@ pub fn github_api_request_builder(url: &str) -> RequestBuilder {
         .header("User-Agent", "KessokuTeaTime-API/1.0")
 }
 
-/// Fetches artifacts using the given parameters
+/// Fetches artifacts from GitHub using the given parameters.
 pub async fn fetch_artifacts(
     owner: &str,
     repo: &str,
@@ -119,14 +123,14 @@ pub async fn fetch_artifacts(
     }
 }
 
-/// Fetches the only artifact using the given parameters
+/// Fetches the only artifact from GitHub using the given parameters.
 pub async fn fetch_artifact(owner: &str, repo: &str, run_id: &str) -> State<Artifact> {
     fetch_artifacts(owner, repo, run_id, Some(1))
         .await
         .map(|artifacts| artifacts[0].clone())
 }
 
-// Downloads the specified artifact
+/// Downloads the specified artifact from GitHub.
 pub async fn download_artifact(
     artifact: &Artifact,
 ) -> State<impl Stream<Item = Result<Bytes, reqwest::Error>> + use<>> {

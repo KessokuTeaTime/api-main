@@ -1,0 +1,1 @@
+//! Endpoint `/internal/api/update`.

@@ -4,16 +4,16 @@ use crate::env::MAX_RETRY;
 
 /// A state that controls the flow of data.
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum State<T> {
+    /// The control flow should exit with a value.
+    Success(T),
     /// The control flow should retry if possible.
     ///
     /// See: [retry_if_possible]
     Retry,
     /// The control flow should exit immediately.
     Stop,
-    /// The control flow should exit with a value.
-    Success(T),
 }
 
 impl<T> State<T> {

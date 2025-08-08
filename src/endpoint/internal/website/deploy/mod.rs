@@ -1,3 +1,5 @@
+//! Endpoint `/internal/website/deploy`.
+
 use crate::{
     framework::{
         State,
@@ -11,56 +13,67 @@ use axum::{extract::Json, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use std::{fmt::Display, sync::LazyLock};
 
-static FRAMEWORK: LazyLock<QueuedAsyncFramework<String>> = LazyLock::new(QueuedAsyncFramework::new);
+static FRAMEWORK: LazyLock<QueuedAsyncFramework<PayloadDestination>> =
+    LazyLock::new(QueuedAsyncFramework::new);
 
-/// Responds to a website deployment request.
-/// Returns [`StatusCode::OK`] right after the deployment is triggered.
+/// Posts a website deployment request.
+/// Responds with [`StatusCode::OK`] right after the deployment is triggered.
 ///
-/// See: [`transaction`]
+/// See: [`Payload`], [`transaction`]
 pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
-    let payload = payload.validate();
-    tokio::spawn(FRAMEWORK.run(payload.dest.clone(), payload.clone(), |cx| {
-        Box::pin(transaction(cx.clone()))
-    }));
+    tokio::spawn(
+        FRAMEWORK.run_with_name(payload.dest, format!("{}", &payload), move |cx| {
+            Box::pin(transaction(cx.clone(), payload.clone()))
+        }),
+    );
     StatusCode::OK
 }
 
-async fn transaction(cx: QueuedAsyncFrameworkContext<Payload>) -> State<()> {
-    let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "website", &cx.payload.run_id).await);
+async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
+    let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await);
     unwrap!(cx.check());
-    unwrap!(download_and_extract(artifact, &cx.payload.path()).await);
+    unwrap!(download_and_extract(artifact, &payload.dest.path()).await);
     State::Success(())
+}
+
+/// The type-safe possible destinations of the post.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Deserialize)]
+pub enum PayloadDestination {
+    /// The website destination.
+    #[serde(rename(deserialize = "www"))]
+    Website,
+}
+
+impl PayloadDestination {
+    /// Returns the path of the destination. Often at `/var/{slug}/html`.
+    pub fn path(&self) -> String {
+        let slug = match &self {
+            Self::Website => "www",
+        };
+        format!("/var/{slug}/html")
+    }
+}
+
+impl Display for PayloadDestination {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.path())
+    }
 }
 
 /// The payload of the post.
 #[derive(Debug, Deserialize, Clone)]
 pub struct Payload {
+    /// The run id of the GitHub workflow.
     pub run_id: String,
-    pub dest: String,
+    /// The [`PayloadDestination`] to put the website into.
+    pub dest: PayloadDestination,
 }
 
 impl Display for Payload {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}<~{}", self.dest, self.run_id))
+        write!(f, "{} <~ {}", self.dest, self.run_id)
     }
 }
 
 unsafe impl Send for Payload {}
-
-impl Payload {
-    /// Validates the [`Payload`] to normalize the destination.
-    pub fn validate(self) -> Self {
-        Self {
-            run_id: self.run_id,
-            dest: self
-                .dest
-                .trim_matches(|c: char| c.is_whitespace() || c == '/')
-                .to_owned(),
-        }
-    }
-
-    /// The path to extract the website archive.
-    pub fn path(&self) -> String {
-        format!("/var/{}/html", &self.dest)
-    }
-}

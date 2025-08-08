@@ -1,14 +1,17 @@
+//! The endpoints of the server.
+
 use axum::{
     Router,
     middleware::from_fn,
     routing::{get, post},
 };
 
-use crate::middleware::{auth::layers::ktt_api_key_authorization, logger::log_request};
+use crate::middleware::{auth::layers::ktt_api_key_authorization, logging::log_request};
 
 pub mod health;
-pub(crate) mod internal;
+pub mod internal;
 
+/// Routes an [`Router`] with the endpoints defined by this module.
 pub fn route_from(mut app: Router) -> Router {
     app = route_gets(app);
     app = route_posts(app);

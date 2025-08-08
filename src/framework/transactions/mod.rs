@@ -1,4 +1,4 @@
-//! Some predefined transactions.
+//! Transactions for use.
 
 mod download_and_extract;
 
