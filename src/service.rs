@@ -1,6 +1,9 @@
 use std::{
     fmt::Display,
-    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
 };
 
 use axum::{
@@ -16,15 +19,13 @@ static_lazy_lock! {
     pub STATUS: Mutex<ServiceStatus> = Mutex::new(ServiceStatus::Running);
 }
 
-pub static RUNNING: AtomicUsize = AtomicUsize::new(usize::MIN);
+static_lazy_lock! {
+    GUARD: Arc<()> = Arc::new(());
+}
 
 pub fn drain(reason: DrainingReason) {
     warn!("draining service due to {reason}!");
     STATUS.lock().drain(reason);
-}
-
-pub fn are_businesses_drained() -> bool {
-    RUNNING.load(Ordering::Acquire) == usize::MIN
 }
 
 pub fn check() -> Result<(), Response> {
@@ -34,27 +35,31 @@ pub fn check() -> Result<(), Response> {
     }
 }
 
-pub fn run() -> BusinessGuard {
-    BusinessGuard::new()
+pub fn run() -> Guard {
+    Guard::new()
 }
 
 #[derive(Debug)]
-pub struct BusinessGuard;
+pub struct Guard(Arc<()>);
 
-impl BusinessGuard {
+impl Guard {
     fn new() -> Self {
-        let count = RUNNING.fetch_add(1, Ordering::Acquire);
+        let count = Arc::strong_count(&GUARD) - 1;
         trace!("starting business ({} running)", count);
-        Self
+        Self(GUARD.clone())
     }
 }
 
-impl Drop for BusinessGuard {
+impl Drop for Guard {
     fn drop(&mut self) {
-        let count = RUNNING.fetch_sub(1, Ordering::Acquire);
-        trace!("stopping business ({} running)", count - 1);
+        let count = Arc::strong_count(&GUARD) - 2;
+        let is_drained = count == 1;
+        trace!("stopping business ({} running)", count);
 
-        if are_businesses_drained() && !IS_STOPPING.swap(true, Ordering::Acquire) {
+        if let ServiceStatus::Draining(_) = *STATUS.lock()
+            && is_drained
+            && !IS_STOPPING.swap(true, Ordering::Acquire)
+        {
             warn!("stopping service because all businesses are drained!");
             tokio::spawn(stop());
         }
