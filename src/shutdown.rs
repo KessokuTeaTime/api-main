@@ -1,4 +1,4 @@
-use std::{fs, process, sync::OnceLock};
+use std::{fs, os::unix::process::CommandExt, process, sync::OnceLock};
 use tokio::{signal, sync::broadcast};
 use tracing::info;
 
@@ -32,7 +32,8 @@ pub enum ShutdownAction {
 
 async fn restart() {
     info!("restarting…");
-    process::Command::new("./api").spawn().unwrap();
+    let err = process::Command::new("./api").exec();
+    panic!("unable to restart the binary: {err}!");
 }
 
 async fn update(binary_path: &str) {
