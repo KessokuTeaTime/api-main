@@ -25,13 +25,13 @@ enum Case {
 pub async fn download_and_extract(artifact: Artifact, path: &str) -> State<()> {
     match download_artifact(&artifact).await {
         State::Success(stream) => {
-            info!("downloading artifact with {artifact}…",);
+            info!("downloading artifact {artifact}…",);
             let case = extract(stream, artifact.digest.as_deref(), path).await;
             cleanup(artifact.clone(), case, path).await;
             State::Success(())
         }
         State::Retry => {
-            error!("failed to download artifact with {artifact}",);
+            error!("failed to download artifact {artifact}",);
             State::Retry
         }
         State::Stop => State::Stop,
