@@ -71,9 +71,9 @@ impl QueuedAsyncFrameworkContext {
                 "current payload index ({}) is falling behind the latest one ({latest_payload_index}), exiting deployment {}!",
                 &self.index, &self.name
             );
-            State::Success(())
-        } else {
             State::Stop
+        } else {
+            State::Success(())
         }
     }
 }
@@ -141,24 +141,22 @@ where
         let _guard = holder.lock.lock().await;
 
         loop {
-            match context.check() {
-                State::Retry => continue,
-                State::Stop => break,
-                _ => {}
-            }
-
-            match f(context.clone()).await {
+            match context.check().replace(f(context.clone()).await) {
                 State::Success(_) => {
                     holder
                         .latest_payload_index
                         .store(u8::default(), Ordering::SeqCst);
                     info!("transaction {name} succeed!");
+                    break;
                 }
                 State::Retry => match retry_if_possible(&mut retry) {
                     Ok(_) => continue,
                     Err(_) => break,
                 },
-                State::Stop => error!("transaction {name} failed!"),
+                State::Stop => {
+                    error!("transaction {name} failed!");
+                    break;
+                }
             }
         }
     }

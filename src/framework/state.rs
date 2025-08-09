@@ -28,6 +28,15 @@ impl<T> State<T> {
             State::Stop => State::Stop,
         }
     }
+
+    /// Replaces [`self`] with a same-typed [`State`] if [`self`] is [`State::Success`].
+    pub fn replace(self, state: Self) -> Self {
+        match self {
+            State::Success(_) => state,
+            State::Retry => State::Retry,
+            State::Stop => State::Stop,
+        }
+    }
 }
 
 /// Decides whether retrying is allowed based on a provided retry times and the [`MAX_RETRY`] environment variable.
