@@ -2,13 +2,16 @@
 
 #![allow(clippy::future_not_send)]
 
-use std::{net::SocketAddr, time::Duration};
+use crate::env::{
+    PORT,
+    info::{BUILD_DATE, RUSTC_COMMIT_HASH},
+};
+
+use std::net::SocketAddr;
 
 use axum::Router;
 use tokio::{net::TcpListener, sync::broadcast};
-use tracing::{info, trace};
-
-use crate::env::PORT;
+use tracing::{debug, info, trace};
 
 pub mod env;
 pub mod framework;
@@ -29,6 +32,7 @@ async fn main() {
     logging::setup().unwrap();
 
     trace!("loaded environment: {:#?}", std::env::vars());
+    debug!("binary compiled at {BUILD_DATE}, from commit {RUSTC_COMMIT_HASH}");
     info!("starting server on port {}", *PORT);
 
     let (tx, _) = broadcast::channel::<ShutdownAction>(1);

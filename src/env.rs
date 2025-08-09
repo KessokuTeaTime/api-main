@@ -1,8 +1,13 @@
 //! Defines the environment variables to use.
 
+use crate::static_lazy_lock;
+
 use std::env;
 
-use crate::static_lazy_lock;
+pub mod info {
+    pub const BUILD_DATE: &str = env!("VERGEN_BUILD_DATE");
+    pub const RUSTC_COMMIT_HASH: &str = env!("VERGEN_RUSTC_COMMIT_HASH");
+}
 
 macro_rules! parse_env {
     ($key:expr => |$var:ident| $expr:expr) => {
