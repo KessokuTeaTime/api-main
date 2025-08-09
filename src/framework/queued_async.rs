@@ -1,7 +1,5 @@
 //! A framework that loops transactions until the max retry times is reached, or a stop signal is received, or a value is returned.
 
-use crate::service;
-
 use super::{State, retry_if_possible};
 
 use std::{
@@ -130,8 +128,6 @@ where
             + Send
             + Sync,
     {
-        service::run();
-
         let holder = self.businesses.lock().entry(id).or_default().clone();
         let index = holder.latest_payload_index.fetch_add(1, Ordering::SeqCst);
         let context: QueuedAsyncFrameworkContext = QueuedAsyncFrameworkContext {

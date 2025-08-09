@@ -2,10 +2,10 @@
 
 #![allow(clippy::future_not_send)]
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 
 use axum::Router;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::broadcast};
 use tracing::{info, trace};
 
 use crate::env::PORT;
@@ -14,11 +14,14 @@ pub mod env;
 pub mod framework;
 pub mod fs;
 pub mod logging;
-pub mod service;
 pub mod workflow;
 
 pub mod endpoint;
 pub mod middleware;
+
+mod shutdown;
+
+pub use shutdown::{SHUTDOWN, ShutdownAction};
 
 #[tokio::main]
 async fn main() {
@@ -28,18 +31,26 @@ async fn main() {
     trace!("loaded environment: {:#?}", std::env::vars());
     info!("starting server on port {}", *PORT);
 
+    let (tx, _) = broadcast::channel::<ShutdownAction>(1);
+    SHUTDOWN.set(tx).unwrap();
+
     let mut app = Router::new();
     app = endpoint::route_from(app);
 
     let listener = TcpListener::bind(format!("0.0.0.0:{}", *PORT))
         .await
         .unwrap();
-    axum::serve(
+    let service = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .await
-    .unwrap();
+    .with_graceful_shutdown(shutdown::signal());
+
+    drop(
+        tokio::time::timeout(Duration::from_secs(30), service)
+            .await
+            .unwrap(),
+    );
 }
 
 /// A shorthand to define a statically allocated variable using a [`std::sync::LazyLock`].

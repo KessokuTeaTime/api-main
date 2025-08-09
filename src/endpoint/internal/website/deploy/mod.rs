@@ -6,7 +6,7 @@ use crate::{
         queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
         transactions::download_and_extract,
     },
-    service, static_lazy_lock,
+    static_lazy_lock,
     workflow::artifact::fetch_artifact,
 };
 
@@ -23,18 +23,13 @@ static_lazy_lock! {
 ///
 /// See: [`Payload`], [`transaction`]
 pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
-    match service::check() {
-        Err(response) => response,
-        Ok(_) => {
-            tokio::spawn(FRAMEWORK.run_with_name(
-                payload.dest,
-                format!("{}", &payload),
-                move |cx| Box::pin(transaction(cx.clone(), payload.clone())),
-            ));
+    tokio::spawn(
+        FRAMEWORK.run_with_name(payload.dest, format!("{}", &payload), move |cx| {
+            Box::pin(transaction(cx.clone(), payload.clone()))
+        }),
+    );
 
-            StatusCode::OK.into_response()
-        }
-    }
+    StatusCode::OK
 }
 
 async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {

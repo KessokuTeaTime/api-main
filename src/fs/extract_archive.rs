@@ -51,18 +51,19 @@ where
             continue;
         };
         let p = path.as_ref().join(sanitize_file_path(name));
+
         if name.ends_with('/') {
             // Is a directory
             if !p.exists() {
                 tokio::fs::create_dir_all(&p).await?;
             }
         } else {
-            // Creates parent directories. They may not exist if iteration is out of order
-            // or the archive does not contain directory entries.
+            // Creates parent directories. They may not exist if iteration is out of order or the archive does not contain directory entries
             let parent = p.parent().expect("cant be a root dir");
             if !parent.is_dir() {
                 tokio::fs::create_dir_all(parent).await?;
             }
+
             let mut writer = tokio::fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -72,6 +73,7 @@ where
             futures::io::copy(a_reading.reader_mut(), &mut writer).await?;
             writer.flush().await?;
         }
+
         a_ready = Some(a_reading.done().await?);
     }
 
