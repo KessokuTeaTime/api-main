@@ -15,14 +15,11 @@ pub async fn signal() {
 
     tokio::select! {
         _ = ctrl_c => {}
-        result = shutdown.recv() => match result {
-            Ok(action) => match action {
-            ShutdownAction::Stop => {}
-            ShutdownAction::Restart => restart().await,
-            ShutdownAction::Update { binary_path } => update(&binary_path).await
-            }
-            Err(_) => {}
-        }
+        result = shutdown.recv() => if let Ok(action) = result { match action {
+        ShutdownAction::Stop => {}
+        ShutdownAction::Restart => restart().await,
+        ShutdownAction::Update { binary_path } => update(&binary_path).await
+        } }
     }
 }
 
