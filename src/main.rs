@@ -40,17 +40,14 @@ async fn main() {
     let listener = TcpListener::bind(format!("0.0.0.0:{}", *PORT))
         .await
         .unwrap();
-    let service = axum::serve(
+
+    axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown::signal());
-
-    drop(
-        tokio::time::timeout(Duration::from_secs(30), service)
-            .await
-            .expect("force stopping after timeout!"),
-    );
+    .with_graceful_shutdown(shutdown::signal())
+    .await
+    .unwrap();
 
     info!("stopping!");
 }
