@@ -27,7 +27,10 @@ pub async fn download_and_extract(artifact: Artifact, path: &str) -> State<()> {
         State::Success(stream) => {
             info!("downloading artifact {artifact}…",);
             let case = extract(stream, artifact.digest.as_deref(), path).await;
+
+            info!("downloaded artifact {artifact}");
             cleanup(artifact.clone(), case, path).await;
+
             State::Success(())
         }
         State::Retry => {

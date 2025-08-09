@@ -31,11 +31,11 @@ async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State
     unwrap!(cx.check());
 
     let path = "./.api.new";
+    unwrap!(download_and_extract(artifact, path).await);
+
     drop(SHUTDOWN.get().unwrap().send(ShutdownAction::Update {
         binary_path: path.to_owned(),
     }));
-
-    unwrap!(download_and_extract(artifact, path).await);
 
     State::Success(())
 }
