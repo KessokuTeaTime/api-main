@@ -1,6 +1,6 @@
 use std::{fs, os::unix::process::CommandExt, process, sync::OnceLock};
 use tokio::{signal, sync::broadcast};
-use tracing::info;
+use tracing::{debug, error, info};
 
 pub static SHUTDOWN: OnceLock<broadcast::Sender<ShutdownAction>> = OnceLock::new();
 
@@ -38,8 +38,11 @@ async fn restart() {
 
 async fn update(binary_path: &str) {
     info!("updating from {}…", binary_path);
-    self_replace::self_replace(binary_path);
-    fs::remove_file(binary_path);
+    match self_replace::self_replace(binary_path) {
+        Ok(_) => debug!("successfully replaced binary from {binary_path}"),
+        Err(err) => error!("failed replacing binary from {binary_path}: {err}"),
+    }
 
+    drop(fs::remove_file(binary_path));
     restart().await
 }
