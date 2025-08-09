@@ -43,6 +43,6 @@ async fn update(binary_path: &str) {
         Err(err) => error!("failed replacing binary from {binary_path}: {err}"),
     }
 
-    // drop(fs::remove_file(binary_path));
+    drop(fs::remove_file(binary_path));
     restart().await
 }

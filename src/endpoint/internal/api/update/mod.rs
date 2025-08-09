@@ -38,7 +38,6 @@ async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State
     drop(SHUTDOWN.get().unwrap().send(ShutdownAction::Update {
         binary_path: format!("{}/{}", path, "api"),
     }));
-    // drop(fs::remove_dir_all(path));
 
     State::Success(())
 }
