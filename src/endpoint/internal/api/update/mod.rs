@@ -6,12 +6,12 @@ use crate::{
         queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
         transactions::download_and_extract,
     },
+    service::{self, DrainingReason},
     static_lazy_lock,
     workflow::artifact::fetch_artifact,
 };
 
-use axum::{Json, response::IntoResponse};
-use reqwest::StatusCode;
+use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 
 static_lazy_lock! {
@@ -19,13 +19,21 @@ static_lazy_lock! {
 }
 
 pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
-    tokio::spawn(FRAMEWORK.run(payload.run_id.clone(), move |cx| {
-        Box::pin(transaction(cx.clone(), payload.clone()))
-    }));
-    StatusCode::OK
+    match service::check() {
+        Err(response) => response,
+        Ok(_) => {
+            tokio::spawn(FRAMEWORK.run(payload.run_id.clone(), move |cx| {
+                Box::pin(transaction(cx.clone(), payload.clone()))
+            }));
+
+            StatusCode::OK.into_response()
+        }
+    }
 }
 
 async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
+    service::drain(DrainingReason::Updating);
+
     let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "api", &payload.run_id).await);
     unwrap!(cx.check());
 

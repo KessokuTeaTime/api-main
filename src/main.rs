@@ -14,6 +14,7 @@ pub mod env;
 pub mod framework;
 pub mod fs;
 pub mod logging;
+pub mod service;
 pub mod workflow;
 
 pub mod endpoint;
