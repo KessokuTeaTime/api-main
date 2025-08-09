@@ -27,4 +27,8 @@ fn route_posts(app: Router) -> Router {
         "/internal/website/deploy",
         post(internal::website::deploy::post).route_layer(ktt_api_key_authorization()),
     )
+    .route(
+        "/internal/api/update",
+        post(internal::api::update::post).route_layer(ktt_api_key_authorization()),
+    )
 }
