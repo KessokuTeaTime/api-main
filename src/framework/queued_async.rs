@@ -164,6 +164,7 @@ where
     }
 }
 
+#[cfg(test)]
 #[tokio::test]
 async fn example() {
     // Defines a framework

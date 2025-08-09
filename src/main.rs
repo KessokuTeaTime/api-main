@@ -51,6 +51,8 @@ async fn main() {
             .await
             .unwrap(),
     );
+
+    info!("stopping!");
 }
 
 /// A shorthand to define a statically allocated variable using a [`std::sync::LazyLock`].

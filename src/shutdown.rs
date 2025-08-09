@@ -1,5 +1,6 @@
-use std::sync::OnceLock;
+use std::{fs, process, sync::OnceLock};
 use tokio::{signal, sync::broadcast};
+use tracing::info;
 
 pub static SHUTDOWN: OnceLock<broadcast::Sender<ShutdownAction>> = OnceLock::new();
 
@@ -32,6 +33,15 @@ pub enum ShutdownAction {
     Update { binary_path: String },
 }
 
-async fn restart() {}
+async fn restart() {
+    info!("restarting…");
+    process::Command::new("sudo").arg("./api").spawn().unwrap();
+}
 
-async fn update(binary_path: &str) {}
+async fn update(binary_path: &str) {
+    info!("updating from {}…", binary_path);
+    self_replace::self_replace(binary_path);
+    fs::remove_file(binary_path);
+
+    restart().await
+}
