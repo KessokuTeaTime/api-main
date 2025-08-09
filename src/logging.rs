@@ -1,6 +1,7 @@
 //! The logging component of the server.
 
 use anyhow::Error;
+use file_rotate::{ContentLimit, FileRotate, compression::Compression, suffix::AppendCount};
 use tracing::level_filters::LevelFilter;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
@@ -29,14 +30,15 @@ pub fn setup() -> Result<(), Error> {
             .build(&*TRACING_DIR)?,
     );
 
-    let latest_file_layer = tracing_subscriber::fmt::layer().with_writer(
-        RollingFileAppender::builder()
-            .filename_prefix("latest")
-            .filename_suffix("log")
-            .rotation(Rotation::DAILY)
-            .max_log_files(1)
-            .build(&*TRACING_DIR)?,
-    );
+    let latest_file_layer = tracing_subscriber::fmt::layer().with_writer(|| {
+        FileRotate::new(
+            format!("{}/latest.log", &*TRACING_DIR),
+            AppendCount::new(0),
+            ContentLimit::Lines(1000),
+            Compression::None,
+            None,
+        )
+    });
 
     tracing_subscriber::registry()
         .with(

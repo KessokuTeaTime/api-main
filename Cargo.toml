@@ -37,6 +37,7 @@ tracing-appender = "0.2.3"
 anyhow = "1.0.98"
 tower-layer = "0.3.3"
 self-replace = "1.5.0"
+file-rotate = "0.8.0"
 
 [workspace.lints.rust]
 missing-docs = "warn"
