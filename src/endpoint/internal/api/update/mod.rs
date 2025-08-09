@@ -1,5 +1,7 @@
 //! Endpoint `/internal/api/update`.
 
+use std::fs;
+
 use crate::{
     SHUTDOWN, ShutdownAction,
     framework::{
@@ -30,12 +32,13 @@ async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State
     let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "api", &payload.run_id).await);
     unwrap!(cx.check());
 
-    let path = "./.api.new";
+    let path = "./update";
     unwrap!(download_and_extract(artifact, path).await);
 
     drop(SHUTDOWN.get().unwrap().send(ShutdownAction::Update {
-        binary_path: path.to_owned(),
+        binary_path: format!("{}/{}", path, "api"),
     }));
+    drop(fs::remove_dir_all(path));
 
     State::Success(())
 }

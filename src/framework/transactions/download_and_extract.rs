@@ -53,6 +53,7 @@ where
         })
         .map_err(std::io::Error::other)
         .into_async_read();
+
     match extract_archive(ZipFileReader::new(&mut read), path).await {
         Ok(_) => {
             // Reads to end for consuming whole buf to hasher, neglecting the error
