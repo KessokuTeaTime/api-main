@@ -5,8 +5,8 @@ use crate::static_lazy_lock;
 use std::env;
 
 pub mod info {
+    pub const GIT_HASH: &str = env!("GIT_HASH");
     pub const BUILD_DATE: &str = env!("VERGEN_BUILD_DATE");
-    pub const RUSTC_COMMIT_HASH: &str = env!("VERGEN_RUSTC_COMMIT_HASH");
 }
 
 macro_rules! parse_env {

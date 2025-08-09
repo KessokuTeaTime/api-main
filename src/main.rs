@@ -4,7 +4,7 @@
 
 use crate::env::{
     PORT,
-    info::{BUILD_DATE, RUSTC_COMMIT_HASH},
+    info::{BUILD_DATE, GIT_HASH},
 };
 
 use std::net::SocketAddr;
@@ -32,7 +32,7 @@ async fn main() {
     logging::setup().unwrap();
 
     trace!("loaded environment: {:#?}", std::env::vars());
-    debug!("binary compiled at {BUILD_DATE}, from commit {RUSTC_COMMIT_HASH}");
+    debug!("binary compiled at {BUILD_DATE} from commit {GIT_HASH}");
     info!("starting server on port {}", *PORT);
 
     let (tx, _) = broadcast::channel::<ShutdownAction>(1);
