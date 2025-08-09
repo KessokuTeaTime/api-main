@@ -49,7 +49,7 @@ async fn main() {
     drop(
         tokio::time::timeout(Duration::from_secs(30), service)
             .await
-            .unwrap(),
+            .expect("force stopping after timeout!"),
     );
 
     info!("stopping!");
