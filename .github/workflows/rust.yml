@@ -16,12 +16,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    
     - name: Set rust to stable
       run: rustup override set stable
+      
     - name: Output the version
       run: rustup --version
+      
     - name: Build
       run: cargo build --verbose --release
+      
     - uses: actions/upload-artifact@v4
       with:
         path: ./target/release/api
+
+  update:
+    name: Update binary
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: KessokuTeaTime/action-kessoku-private-ci@main
+        with:
+          auth: ${{ secrets.KTT_API_TOKEN }}
+          endpoint: ${{ vars.KTT_API_ENDPOINT }}
+          payload: |
+            {
+              "run_id": "${{ github.run_id }}"
+            }
