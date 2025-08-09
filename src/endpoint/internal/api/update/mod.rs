@@ -32,7 +32,7 @@ async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State
     let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "api", &payload.run_id).await);
     unwrap!(cx.check());
 
-    let path = "./";
+    let path = "./update";
     unwrap!(download_and_extract(artifact, path).await);
 
     drop(SHUTDOWN.get().unwrap().send(ShutdownAction::Update {
