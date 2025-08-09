@@ -32,7 +32,7 @@ pub enum ShutdownAction {
 
 async fn restart() {
     info!("restarting…");
-    process::Command::new("sudo").arg("./api").spawn().unwrap();
+    process::Command::new("./api").spawn().unwrap();
 }
 
 async fn update(binary_path: &str) {
