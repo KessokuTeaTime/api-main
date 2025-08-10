@@ -135,7 +135,7 @@ pub async fn download_artifact(
     artifact: &Artifact,
 ) -> State<impl Stream<Item = Result<Bytes, reqwest::Error>> + use<>> {
     debug!(
-        "downloading artifact from {}…",
+        "requesting download from {}…",
         &artifact.archive_download_url
     );
 
@@ -145,33 +145,24 @@ pub async fn download_artifact(
     {
         Ok(resp) => {
             let stream = resp.bytes_stream();
-            match stream.size_hint() {
-                (min, Some(max)) => info!(
-                    "downloaded artifact at {} with size {}..{}",
-                    artifact.archive_download_url, min, max
-                ),
-                (min, None) => info!(
-                    "downloaded artifact at {} with size >={}",
-                    artifact.archive_download_url, min
-                ),
-            }
+            info!("requested download from {}", artifact.archive_download_url);
             State::Success(stream)
         }
         Err(err) => match err.status() {
             Some(reqwest::StatusCode::GONE) => {
-                error!("failed to download artifact: artifact expired or removed");
+                error!("failed to request download: artifact expired or removed");
                 State::Stop
             }
             Some(status) => {
                 if let Some(reason) = status.canonical_reason() {
                     error!(
-                        "failed to download artifact at {}: {} {reason}",
+                        "failed to request download from {}: {} {reason}",
                         &artifact.archive_download_url,
                         status.as_u16()
                     );
                 } else {
                     error!(
-                        "failed to download artifact at {}: {}",
+                        "failed to request download from {}: {}",
                         &artifact.archive_download_url,
                         status.as_u16()
                     )

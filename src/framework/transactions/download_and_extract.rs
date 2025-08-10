@@ -71,7 +71,7 @@ where
 
 async fn cleanup(artifact: Artifact, case: Case, path: &str) {
     match case {
-        Case::Deployed => info!("successfully extracted {artifact} to {path}!"),
+        Case::Deployed => info!("successfully extracted {artifact} to {path}"),
         Case::HashUnmatch => {
             error!("failed to extract {artifact} to {path}: broken artifact",);
             drop(remove_dir_all(path).await);
