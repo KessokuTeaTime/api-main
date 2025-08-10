@@ -1,3 +1,5 @@
+//! Generates static build info.
+
 use std::process::Command;
 
 use anyhow::Error;

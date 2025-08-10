@@ -18,7 +18,7 @@ static_lazy_lock! {
     FRAMEWORK: QueuedAsyncFramework<PayloadDestination> = QueuedAsyncFramework::new();
 }
 
-/// Posts a website deployment request.
+/// The client posted a website deployment request.
 /// Responds with [`StatusCode::OK`] right after the deployment is triggered.
 ///
 /// See: [`Payload`], [`transaction`]

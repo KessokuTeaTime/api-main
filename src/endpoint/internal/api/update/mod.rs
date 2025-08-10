@@ -1,7 +1,5 @@
 //! Endpoint `/internal/api/update`.
 
-use std::fs;
-
 use crate::{
     SHUTDOWN, ShutdownAction,
     framework::{
@@ -20,6 +18,10 @@ static_lazy_lock! {
     FRAMEWORK: QueuedAsyncFramework<String> = QueuedAsyncFramework::new();
 }
 
+/// The client posted an api update request.
+/// Responds with [`StatusCode::OK`] right after the deployment is triggered.
+///
+/// See: [`Payload`], [transaction]
 pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
     tokio::spawn(FRAMEWORK.run(payload.run_id.clone(), move |cx| {
         Box::pin(transaction(cx.clone(), payload.clone()))
@@ -42,7 +44,9 @@ async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State
     State::Success(())
 }
 
+/// The payload of the post.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Payload {
+    /// The run id of the GitHub workflow.
     pub run_id: String,
 }

@@ -2,6 +2,7 @@ use std::{fs, os::unix::process::CommandExt, process, sync::OnceLock};
 use tokio::{signal, sync::broadcast};
 use tracing::{debug, error, info};
 
+/// The broadcast sender to shutdown the server.
 pub static SHUTDOWN: OnceLock<broadcast::Sender<ShutdownAction>> = OnceLock::new();
 
 pub async fn signal() {
@@ -23,11 +24,19 @@ pub async fn signal() {
     }
 }
 
+/// The action to perform when shutting down a server.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum ShutdownAction {
+    /// Gracefully stops the server.
     Stop,
+    /// Restarts the server in-place.
     Restart,
-    Update { binary_path: String },
+    /// Updates the server from a new binary.
+    Update {
+        /// The path to the new binary.
+        binary_path: String,
+    },
 }
 
 async fn restart() {
@@ -39,10 +48,12 @@ async fn restart() {
 async fn update(binary_path: &str) {
     info!("updating from {}…", binary_path);
     match self_replace::self_replace(binary_path) {
-        Ok(_) => debug!("successfully replaced binary from {binary_path}"),
+        Ok(_) => {
+            debug!("successfully replaced binary from {binary_path}, removing abndant files…");
+            drop(fs::remove_file(binary_path));
+        }
         Err(err) => error!("failed replacing binary from {binary_path}: {err}"),
     }
 
-    drop(fs::remove_file(binary_path));
     restart().await
 }

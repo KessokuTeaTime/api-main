@@ -4,9 +4,12 @@ use crate::static_lazy_lock;
 
 use std::env;
 
+/// The info generated during build.
 pub mod info {
+    /// The latest Git commit hash.
     pub const GIT_HASH: &str = env!("GIT_HASH");
-    pub const BUILD_DATE: &str = env!("VERGEN_BUILD_DATE");
+    /// The build timestamp.
+    pub const BUILD_TIMESTAMP: &str = env!("VERGEN_BUILD_TIMESTAMP");
 }
 
 macro_rules! parse_env {
