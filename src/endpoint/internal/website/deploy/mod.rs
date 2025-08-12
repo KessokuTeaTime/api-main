@@ -16,28 +16,7 @@ use serde::Deserialize;
 use std::fmt::Display;
 
 static_lazy_lock! {
-    FRAMEWORK: QueuedAsyncFramework<PayloadDestination> = QueuedAsyncFramework::new();
-}
-
-/// The client posted a website deployment request.
-/// Responds with [`StatusCode::OK`] right after the deployment is triggered.
-///
-/// See: [`Payload`], [`transaction`]
-pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
-    tokio::spawn(
-        FRAMEWORK.run_with_name(payload.dest, format!("{}", &payload), move |cx| {
-            Box::pin(transaction(cx.clone(), payload.clone()))
-        }),
-    );
-
-    StatusCode::OK
-}
-
-async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
-    let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await);
-    unwrap!(cx.check());
-    unwrap!(download_and_extract_archive(artifact, &payload.dest.path()).await);
-    State::Success(())
+    QUEUED_ASYNC: QueuedAsyncFramework<PayloadDestination> = QueuedAsyncFramework::new();
 }
 
 /// The type-safe possible destinations of the post.
@@ -81,3 +60,24 @@ impl Display for Payload {
 }
 
 unsafe impl Send for Payload {}
+
+/// The client posted a website deployment request.
+/// Responds with [`StatusCode::OK`] right after the deployment is triggered.
+///
+/// See: [`Payload`], [`transaction`]
+pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
+    tokio::spawn(
+        QUEUED_ASYNC.run_with_name(payload.dest, format!("{}", &payload), move |cx| {
+            Box::pin(post_transaction(cx.clone(), payload.clone()))
+        }),
+    );
+
+    StatusCode::OK
+}
+
+async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
+    let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await);
+    unwrap!(cx.check());
+    unwrap!(download_and_extract_archive(artifact, &payload.dest.path()).await);
+    State::Success(())
+}
