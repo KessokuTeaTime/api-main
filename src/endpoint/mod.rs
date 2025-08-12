@@ -12,23 +12,15 @@ pub mod health;
 pub mod internal;
 
 /// Routes an [`Router`] with the endpoints defined by this module.
-pub fn route_from(mut app: Router) -> Router {
-    app = route_gets(app);
-    app = route_posts(app);
-    app.layer(from_fn(log_request))
-}
-
-fn route_gets(app: Router) -> Router {
+pub fn route_from(app: Router) -> Router {
     app.route("/health", get(health::get))
-}
-
-fn route_posts(app: Router) -> Router {
-    app.route(
-        "/internal/update",
-        post(internal::update::post).route_layer(kessoku_private_ci_authorization()),
-    )
-    .route(
-        "/internal/website/deploy",
-        post(internal::website::deploy::post).route_layer(kessoku_private_ci_authorization()),
-    )
+        .route(
+            "/internal/update",
+            post(internal::update::post).route_layer(kessoku_private_ci_authorization()),
+        )
+        .route(
+            "/internal/website/deploy",
+            post(internal::website::deploy::post).route_layer(kessoku_private_ci_authorization()),
+        )
+        .layer(from_fn(log_request))
 }
