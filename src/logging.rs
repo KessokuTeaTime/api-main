@@ -1,4 +1,4 @@
-//! The logging component of the server.
+//! The logging component.
 
 use anyhow::Error;
 use file_rotate::{ContentLimit, FileRotate, compression::Compression, suffix::AppendCount};
@@ -10,7 +10,7 @@ use tracing_subscriber::{
 
 use crate::env::{TRACING_DIR, TRACING_MAX_FILES};
 
-/// Setup the logging component, which contains a stderr layer, a rolling file layer, and a latest file layer.
+/// Sets up the logging component, which contains a stderr layer, a rolling file layer, and a latest file layer.
 ///
 /// # Errors
 ///
