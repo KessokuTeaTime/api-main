@@ -23,16 +23,15 @@ static_lazy_lock! {
 
 /// The payload of the post.
 #[derive(Debug, Clone, Deserialize)]
-pub struct Payload {
-    /// The run id of the GitHub workflow.
-    pub run_id: String,
+pub struct PostPayload {
+    run_id: String,
 }
 
 /// The client posted an api update request.
 /// Responds with [`StatusCode::OK`] right after the deployment is triggered.
 ///
-/// See: [`Payload`], [transaction]
-pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
+/// See: [`PostPayload`], [`post_transaction`]
+pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
     tokio::spawn(QUEUED_ASYNC.run(payload.run_id.clone(), move |cx| {
         Box::pin(post_transaction(cx.clone(), payload.clone()))
     }));
@@ -40,7 +39,7 @@ pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
     StatusCode::OK
 }
 
-async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
+async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "api-main", &payload.run_id).await);
     unwrap!(cx.check());
 

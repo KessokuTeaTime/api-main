@@ -16,19 +16,19 @@ use serde::Deserialize;
 use std::fmt::Display;
 
 static_lazy_lock! {
-    QUEUED_ASYNC: QueuedAsyncFramework<PayloadDestination> = QueuedAsyncFramework::new();
+    QUEUED_ASYNC: QueuedAsyncFramework<PostPayloadDestination> = QueuedAsyncFramework::new();
 }
 
 /// The type-safe possible destinations of the post.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Deserialize)]
-pub enum PayloadDestination {
+pub enum PostPayloadDestination {
     /// The website destination.
     #[serde(rename(deserialize = "www"))]
     Website,
 }
 
-impl PayloadDestination {
+impl PostPayloadDestination {
     /// Returns the path of the destination. Often at `/var/{slug}/html`.
     pub fn path(&self) -> String {
         let slug = match &self {
@@ -38,7 +38,7 @@ impl PayloadDestination {
     }
 }
 
-impl Display for PayloadDestination {
+impl Display for PostPayloadDestination {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.path())
     }
@@ -46,26 +46,24 @@ impl Display for PayloadDestination {
 
 /// The payload of the post.
 #[derive(Debug, Clone, Deserialize)]
-pub struct Payload {
-    /// The run id of the GitHub workflow.
-    pub run_id: String,
-    /// The [`PayloadDestination`] to put the website into.
-    pub dest: PayloadDestination,
+pub struct PostPayload {
+    run_id: String,
+    dest: PostPayloadDestination,
 }
 
-impl Display for Payload {
+impl Display for PostPayload {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} <~ {}", self.dest, self.run_id)
     }
 }
 
-unsafe impl Send for Payload {}
+unsafe impl Send for PostPayload {}
 
 /// The client posted a website deployment request.
 /// Responds with [`StatusCode::OK`] right after the deployment is triggered.
 ///
-/// See: [`Payload`], [`transaction`]
-pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
+/// See: [`PostPayload`], [`post_transaction`]
+pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
     tokio::spawn(
         QUEUED_ASYNC.run_with_name(payload.dest, format!("{}", &payload), move |cx| {
             Box::pin(post_transaction(cx.clone(), payload.clone()))
@@ -75,7 +73,7 @@ pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
     StatusCode::OK
 }
 
-async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
+async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await);
     unwrap!(cx.check());
     unwrap!(download_and_extract_archive(artifact, &payload.dest.path()).await);
