@@ -25,6 +25,7 @@ async_zip = { version = "=0.0.17", features = [
     "deflate64",
 ] }
 tokio = { version = "1.47", features = [
+    "macros",
     "fs",
     "rt-multi-thread",
     "sync",
