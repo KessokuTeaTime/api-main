@@ -1,4 +1,4 @@
-//! Endpoint `/internal/api/update`.
+//! Endpoint `/internal/update`.
 
 use std::path::PathBuf;
 
