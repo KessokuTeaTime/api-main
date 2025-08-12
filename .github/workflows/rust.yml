@@ -28,7 +28,7 @@ jobs:
       
     - uses: actions/upload-artifact@v4
       with:
-        path: ./target/release/api
+        path: ./target/release/main
 
   update:
     name: Update binary
