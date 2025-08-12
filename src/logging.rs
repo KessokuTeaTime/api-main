@@ -27,12 +27,12 @@ pub fn setup() -> Result<(), Error> {
             .filename_suffix("log")
             .rotation(Rotation::DAILY)
             .max_log_files(*TRACING_MAX_FILES)
-            .build(&*TRACING_DIR)?,
+            .build(&*TRACING_DIR.join("main"))?,
     );
 
     let latest_file_layer = tracing_subscriber::fmt::layer().with_writer(|| {
         FileRotate::new(
-            format!("{}/latest.log", &*TRACING_DIR),
+            &*TRACING_DIR.join("main").join("latest.log"),
             AppendCount::new(0),
             ContentLimit::Lines(1000),
             Compression::None,

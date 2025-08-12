@@ -1,6 +1,6 @@
 //! Defines the environment variables to use.
 
-use std::env;
+use std::{env, path::PathBuf};
 
 use api_framework::{env::parse_env, static_lazy_lock};
 
@@ -33,6 +33,6 @@ static_lazy_lock! {
 }
 
 static_lazy_lock! {
-    pub TRACING_DIR: String = env::var("TRACING_DIR").unwrap_or("/tmp/api/tracing".to_owned());
-    "The directory for tracing files. Defaults to `/tmp/api/tracing` if not specified."
+    pub TRACING_DIR: PathBuf = parse_env!("TRACING_DIR" => |s| Ok(PathBuf::from(s))).unwrap_or(PathBuf::from("/tmp/tracing"));
+    "The directory for tracing files. Defaults to `/tmp/tracing` if not specified."
 }
