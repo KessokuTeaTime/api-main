@@ -48,25 +48,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
-name = "api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "api-framework",
- "axum",
- "dotenvy",
- "file-rotate",
- "serde",
- "tokio",
- "tower-http",
- "tower-layer",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "vergen",
-]
-
-[[package]]
 name = "api-framework"
 version = "0.1.0"
 source = "git+https://github.com/KessokuTeaTime/api-framework#cdc8a105fd4667b65c95238c991ffa7b3b19b025"
@@ -1142,6 +1123,25 @@ name = "log"
 version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
+
+[[package]]
+name = "main"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "api-framework",
+ "axum",
+ "dotenvy",
+ "file-rotate",
+ "serde",
+ "tokio",
+ "tower-http",
+ "tower-layer",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "vergen",
+]
 
 [[package]]
 name = "matchit"
