@@ -3,7 +3,8 @@
 /.vscode
 /.idea
 /.VSCodeCounter
-/Cargo.lock
 */Cargo.lock
+/Cargo.lock
+.env
 
-*.DS_STORE
+*.DS_Store
