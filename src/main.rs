@@ -33,7 +33,7 @@ async fn main() {
         clap::crate_version!()
     );
     info!("compiled from commit {GIT_HASH} at {BUILD_TIMESTAMP}");
-    info!("starting server on port {}", *PORT);
+    info!("starting server on port {}…", *PORT);
 
     let mut app = Router::new();
     app = endpoint::route_from(app);
