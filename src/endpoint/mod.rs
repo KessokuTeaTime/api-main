@@ -19,16 +19,16 @@ pub fn route_from(mut app: Router) -> Router {
 }
 
 fn route_gets(app: Router) -> Router {
-    app.route("/api/health", get(health::get))
+    app.route("/health", get(health::get))
 }
 
 fn route_posts(app: Router) -> Router {
     app.route(
-        "/api/internal/website/deploy",
+        "/internal/website/deploy",
         post(internal::website::deploy::post).route_layer(kessoku_private_ci_authorization()),
     )
     .route(
-        "/api/internal/update/main",
-        post(internal::update::main::post).route_layer(kessoku_private_ci_authorization()),
+        "/internal/update/main",
+        post(internal::update::post).route_layer(kessoku_private_ci_authorization()),
     )
 }
