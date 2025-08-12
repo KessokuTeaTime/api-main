@@ -100,7 +100,7 @@ checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 [[package]]
 name = "api-framework"
 version = "0.1.0"
-source = "git+https://github.com/KessokuTeaTime/api-framework#0aa1f415a3bbe4c6149f546604b8f4b53fe32f87"
+source = "git+https://github.com/KessokuTeaTime/api-framework#6ea0524e0676bc529f8db0842f1183a3b8154fac"
 dependencies = [
  "anyhow",
  "async_zip",
