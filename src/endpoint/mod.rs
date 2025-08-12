@@ -24,11 +24,11 @@ fn route_gets(app: Router) -> Router {
 
 fn route_posts(app: Router) -> Router {
     app.route(
-        "/internal/website/deploy",
-        post(internal::website::deploy::post).route_layer(kessoku_private_ci_authorization()),
-    )
-    .route(
         "/internal/update",
         post(internal::update::post).route_layer(kessoku_private_ci_authorization()),
+    )
+    .route(
+        "/internal/website/deploy",
+        post(internal::website::deploy::post).route_layer(kessoku_private_ci_authorization()),
     )
 }
