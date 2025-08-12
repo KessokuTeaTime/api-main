@@ -44,7 +44,7 @@ pub fn setup() -> Result<(), Error> {
         .with(
             stderr_layer
                 .with_timer(ChronoLocal::rfc_3339())
-                .with_filter(LevelFilter::DEBUG),
+                .with_filter(LevelFilter::INFO),
         )
         .with(
             rolling_file_layer

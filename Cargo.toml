@@ -17,6 +17,7 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["chrono"] }
 tracing-appender = "0.2.3"
 file-rotate = "0.8.0"
+clap = { version = "4.5.44", features = ["cargo"] }
 
 [build-dependencies]
 anyhow = "1.0.98"
