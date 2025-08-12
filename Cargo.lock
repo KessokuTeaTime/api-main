@@ -52,10 +52,27 @@ name = "api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async_zip",
+ "api-framework",
  "axum",
  "dotenvy",
  "file-rotate",
+ "serde",
+ "tokio",
+ "tower-http",
+ "tower-layer",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "vergen",
+]
+
+[[package]]
+name = "api-framework"
+version = "0.1.0"
+source = "git+https://github.com/KessokuTeaTime/api-framework#cdc8a105fd4667b65c95238c991ffa7b3b19b025"
+dependencies = [
+ "anyhow",
+ "async_zip",
  "futures",
  "hex",
  "parking_lot",
@@ -66,12 +83,7 @@ dependencies = [
  "sha2",
  "tokio",
  "tokio-util",
- "tower-http",
- "tower-layer",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "vergen",
  "zip",
 ]
 

@@ -9,22 +9,16 @@ use crate::env::{
 
 use std::net::SocketAddr;
 
+use api_framework::shutdown;
 use axum::Router;
-use tokio::{net::TcpListener, sync::broadcast};
+use tokio::net::TcpListener;
 use tracing::{debug, info, trace};
 
 pub mod env;
-pub mod framework;
-pub mod fs;
 pub mod logging;
-pub mod workflow;
 
 pub mod endpoint;
 pub mod middleware;
-
-mod shutdown;
-
-pub use shutdown::{SHUTDOWN, ShutdownAction};
 
 #[tokio::main]
 async fn main() {
@@ -34,9 +28,6 @@ async fn main() {
     trace!("loaded environment: {:#?}", std::env::vars());
     debug!("binary compiled at {BUILD_TIMESTAMP} from commit {GIT_HASH}");
     info!("starting server on port {}", *PORT);
-
-    let (tx, _) = broadcast::channel::<ShutdownAction>(1);
-    SHUTDOWN.set(tx).unwrap();
 
     let mut app = Router::new();
     app = endpoint::route_from(app);
@@ -54,24 +45,4 @@ async fn main() {
     .unwrap();
 
     info!("stopping!");
-}
-
-/// A shorthand to define a statically allocated variable using a [`std::sync::LazyLock`].
-///
-/// # Examples
-///
-/// ```rust
-/// static_lazy_lock!{
-///     pub VAR_1: String = String::from("a static variable");
-/// }
-/// // ...equals to...
-/// pub static VAR_2: LazyLock<String> = LazyLock::new(|| String::from("a static variable"));
-/// ```
-#[macro_export]
-macro_rules! static_lazy_lock {
-    ($vis:vis $name:ident: $type:ty = $expr:expr; $($doc:expr)?) => {
-        $(#[doc=$doc])?
-        $vis static $name: std::sync::LazyLock<$type> =
-            std::sync::LazyLock::new(|| $expr);
-    };
 }

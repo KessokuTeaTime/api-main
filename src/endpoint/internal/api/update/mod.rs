@@ -1,13 +1,13 @@
 //! Endpoint `/internal/api/update`.
 
-use crate::{
-    SHUTDOWN, ShutdownAction,
+use api_framework::{
     framework::{
         State,
         queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
-        transactions::download_and_extract,
     },
+    shutdown::{SHUTDOWN, ShutdownAction},
     static_lazy_lock,
+    transactions::download_and_extract_archive,
     workflow::artifact::fetch_artifact,
 };
 
@@ -35,10 +35,10 @@ async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State
     unwrap!(cx.check());
 
     let path = "./update";
-    unwrap!(download_and_extract(artifact, path).await);
+    unwrap!(download_and_extract_archive(artifact, path).await);
 
-    drop(SHUTDOWN.get().unwrap().send(ShutdownAction::Update {
-        binary_path: format!("{}/{}", path, "api"),
+    drop(SHUTDOWN.send(ShutdownAction::Update {
+        executable_path: format!("{}/{}", path, "api"),
     }));
 
     State::Success(())

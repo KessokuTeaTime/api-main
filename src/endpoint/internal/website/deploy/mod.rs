@@ -1,12 +1,12 @@
 //! Endpoint `/internal/website/deploy`.
 
-use crate::{
+use api_framework::{
     framework::{
         State,
         queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
-        transactions::download_and_extract,
     },
     static_lazy_lock,
+    transactions::download_and_extract_archive,
     workflow::artifact::fetch_artifact,
 };
 
@@ -35,7 +35,7 @@ pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
 async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
     let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "website", &payload.run_id).await);
     unwrap!(cx.check());
-    unwrap!(download_and_extract(artifact, &payload.dest.path()).await);
+    unwrap!(download_and_extract_archive(artifact, &payload.dest.path()).await);
     State::Success(())
 }
 

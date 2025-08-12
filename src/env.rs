@@ -1,8 +1,8 @@
 //! Defines the environment variables to use.
 
-use crate::static_lazy_lock;
-
 use std::env;
+
+use api_framework::{env::parse_env, static_lazy_lock};
 
 /// The info generated during build.
 pub mod info {
@@ -10,17 +10,6 @@ pub mod info {
     pub const GIT_HASH: &str = env!("GIT_HASH");
     /// The build timestamp.
     pub const BUILD_TIMESTAMP: &str = env!("VERGEN_BUILD_TIMESTAMP");
-}
-
-macro_rules! parse_env {
-    ($key:expr => |$var:ident| $expr:expr) => {
-        std::env::var($key)
-            .map_err(|e| anyhow::anyhow!(e))
-            .and_then(|$var| $expr)
-    };
-    ($key:expr => |$var:ident| $expr:expr; anyhow) => {
-        parse_env!($key => |$var| $expr.map_err(|e| anyhow::anyhow!(e)))
-    };
 }
 
 static_lazy_lock! {
@@ -36,16 +25,6 @@ static_lazy_lock! {
 static_lazy_lock! {
     pub KTT_API_PASSWORD: String = env::var("KTT_API_PASSWORD").expect("KTT_API_PASSWORD not set in environment");
     "The password of the API key."
-}
-
-static_lazy_lock! {
-    pub GITHUB_TOKEN: String = env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN not set in environment");
-    "The GitHub token."
-}
-
-static_lazy_lock! {
-    pub MAX_RETRY: u8 = parse_env!("MAX_RETRY" => |s| s.parse::<u8>(); anyhow).unwrap_or(5);
-    "The maximum retry limit for transactions."
 }
 
 static_lazy_lock! {

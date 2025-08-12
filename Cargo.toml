@@ -5,40 +5,17 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
+api-framework = { git = "https://github.com/KessokuTeaTime/api-framework" }
 anyhow = "1.0.98"
 axum = "0.8.4"
 dotenvy = "0.15.7"
-hex = "0.4.3"
-reqwest = { version = "0.12.22", features = ["json", "blocking", "stream"] }
 serde = { version = "1.0.219", features = ["derive"] }
-sha2 = "0.10.9"
-zip = { version = "4.3.0", default-features = false, features = ["deflate"] }
-parking_lot = "0.12"
-futures = "0.3"
-async_zip = { version = "=0.0.17", features = [
-    "async-compression",
-    "deflate",
-    "bzip2",
-    "lzma",
-    "xz",
-    "zstd",
-    "deflate64",
-] }
-tokio = { version = "1.47", features = [
-    "macros",
-    "fs",
-    "rt-multi-thread",
-    "sync",
-    "signal",
-] }
-tokio-util = { version = "0.7", features = ["io", "compat"] }
-sanitize-filename = "0.6"
+tokio = { version = "1.47", features = ["rt-multi-thread"] }
 tower-http = { version = "0.6.6", features = ["auth"] }
+tower-layer = "0.3.3"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["chrono"] }
 tracing-appender = "0.2.3"
-tower-layer = "0.3.3"
-self-replace = "1.5.0"
 file-rotate = "0.8.0"
 
 [build-dependencies]
