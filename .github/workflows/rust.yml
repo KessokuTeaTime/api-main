@@ -17,11 +17,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set rust to stable
-      run: rustup override set stable
+    - name: Setup Rust & Cargo
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
       
-    - name: Output the version
-      run: rustup --version
+    - run: rustup --version
+
+    - name: Cache
+      uses: Leafwing-Studios/cargo-cache@v2
       
     - name: Build
       run: cargo build --verbose --release
