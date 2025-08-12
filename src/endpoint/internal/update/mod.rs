@@ -31,14 +31,14 @@ pub async fn post(Json(payload): Json<Payload>) -> impl IntoResponse {
 }
 
 async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State<()> {
-    let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "api", &payload.run_id).await);
+    let artifact = unwrap!(fetch_artifact("KessokuTeaTime", "api-main", &payload.run_id).await);
     unwrap!(cx.check());
 
     let path = "./update";
     unwrap!(download_and_extract_archive(artifact, path).await);
 
     drop(SHUTDOWN.send(ShutdownAction::Update {
-        executable_path: format!("{}/{}", path, "api"),
+        executable_path: format!("{}/{}", path, "main"),
     }));
 
     State::Success(())
