@@ -4,5 +4,5 @@
 //!
 //! See: [`crate::middleware::auth`]
 
-pub mod api;
+pub mod update;
 pub mod website;

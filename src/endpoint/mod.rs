@@ -19,16 +19,16 @@ pub fn route_from(mut app: Router) -> Router {
 }
 
 fn route_gets(app: Router) -> Router {
-    app.route("/health", get(health::get))
+    app.route("/main/health", get(health::get))
 }
 
 fn route_posts(app: Router) -> Router {
     app.route(
-        "/internal/website/deploy",
+        "/main/internal/website/deploy",
         post(internal::website::deploy::post).route_layer(ktt_api_key_authorization()),
     )
     .route(
-        "/internal/api/update",
-        post(internal::api::update::post).route_layer(ktt_api_key_authorization()),
+        "/main/internal/update",
+        post(internal::update::post).route_layer(ktt_api_key_authorization()),
     )
 }
