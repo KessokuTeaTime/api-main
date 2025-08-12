@@ -40,7 +40,7 @@ async fn transaction(cx: QueuedAsyncFrameworkContext, payload: Payload) -> State
     unwrap!(download_and_extract_archive(artifact, &path).await);
 
     drop(SHUTDOWN.send(ShutdownAction::Update {
-        executable_path: path.join("main"),
+        executable_path: path.join(clap::crate_name!()),
     }));
 
     State::Success(())

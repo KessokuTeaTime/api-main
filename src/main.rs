@@ -23,6 +23,7 @@ pub mod middleware;
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
+    dotenvy::from_filename(format!(".{}.env", clap::crate_name!())).ok();
     logging::setup().unwrap();
 
     trace!("loaded environment: {:#?}", std::env::vars());

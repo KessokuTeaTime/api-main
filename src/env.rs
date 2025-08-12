@@ -1,4 +1,4 @@
-//! Defines the environment variables to use.
+//! Defines environment variables.
 
 use std::{env, path::PathBuf};
 
@@ -33,6 +33,6 @@ static_lazy_lock! {
 }
 
 static_lazy_lock! {
-    pub TRACING_DIR: PathBuf = parse_env!("TRACING_DIR" => |s| Ok(PathBuf::from(s))).unwrap_or(PathBuf::from("/tmp/tracing"));
-    "The directory for tracing files. Defaults to `/tmp/tracing` if not specified."
+    pub TRACING_DIR: PathBuf = parse_env!("TRACING_DIR" => |s| Ok(PathBuf::from(s))).unwrap_or(PathBuf::from("/tmp/tracing")).join(clap::crate_name!());
+    "The directory for tracing files. Defaults to `/tmp/tracing/main` if not specified."
 }
