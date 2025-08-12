@@ -8,7 +8,7 @@ pub mod layers {
     /// The layer that authorizes requests with the KessokuTeaTime private CI key in Base 64 format.
     ///
     /// See: [`KTT_API_USERNAME`], [`KTT_API_PASSWORD`], [`AddAuthorizationLayer`]
-    pub fn ktt_api_key_authorization() -> AddAuthorizationLayer {
+    pub fn kessoku_private_ci_authorization() -> AddAuthorizationLayer {
         AddAuthorizationLayer::basic(&KTT_API_USERNAME, &KTT_API_PASSWORD)
     }
 }

@@ -6,7 +6,7 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::middleware::{auth::layers::ktt_api_key_authorization, logging::log_request};
+use crate::middleware::{auth::layers::kessoku_private_ci_authorization, logging::log_request};
 
 pub mod health;
 pub mod internal;
@@ -25,10 +25,10 @@ fn route_gets(app: Router) -> Router {
 fn route_posts(app: Router) -> Router {
     app.route(
         "/api/internal/website/deploy",
-        post(internal::website::deploy::post).route_layer(ktt_api_key_authorization()),
+        post(internal::website::deploy::post).route_layer(kessoku_private_ci_authorization()),
     )
     .route(
         "/api/internal/update/main",
-        post(internal::update::main::post).route_layer(ktt_api_key_authorization()),
+        post(internal::update::main::post).route_layer(kessoku_private_ci_authorization()),
     )
 }
