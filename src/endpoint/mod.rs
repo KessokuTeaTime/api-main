@@ -1,4 +1,4 @@
-//! The endpoints of the server.
+//! The API endpoints.
 
 use axum::{
     Router,
