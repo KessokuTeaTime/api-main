@@ -3,7 +3,8 @@
 use api_framework::{
     framework::{
         State,
-        queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
+        queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext},
+        unwrap,
     },
     static_lazy_lock,
     transactions::download_and_extract_archive,

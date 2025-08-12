@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use api_framework::{
     framework::{
         State,
-        queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext, unwrap},
+        queued_async::{QueuedAsyncFramework, QueuedAsyncFrameworkContext},
+        unwrap,
     },
     shutdown::{SHUTDOWN, ShutdownAction},
     static_lazy_lock,
