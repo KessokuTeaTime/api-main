@@ -1,0 +1,53 @@
+name: Build Rust binary & update executable file on server
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: "build"
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust & Cargo
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - run: rustup --version
+
+      - name: Cache
+        uses: Leafwing-Studios/cargo-cache@v2
+
+      - name: Build
+        run: cargo build --verbose --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: ./target/release/main
+
+  update:
+    name: Update executable file
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: KessokuTeaTime/action-kessoku-private-ci@main
+        with:
+          auth: ${{ secrets.KTT_API_TOKEN }}
+          endpoint: ${{ vars.KTT_API_ENDPOINT }}
+          payload: |
+            {
+              "run_id": "${{ github.run_id }}"
+            }
