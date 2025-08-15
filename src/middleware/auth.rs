@@ -1,4 +1,4 @@
-//! Middlewares for authorization.
+//! Middleware for authorization.
 
 /// Router layers for authorization.
 pub mod layers {

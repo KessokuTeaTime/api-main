@@ -4,6 +4,12 @@ use std::{env, path::PathBuf};
 
 use api_framework::{env::parse_env, static_lazy_lock};
 
+/// Sets up environment variables.
+pub fn setup() {
+    dotenvy::dotenv().ok();
+    dotenvy::from_filename_override(format!("{}.env", clap::crate_name!())).ok();
+}
+
 /// The info generated during build.
 pub mod info {
     /// The latest Git commit hash.

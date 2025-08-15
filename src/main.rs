@@ -9,6 +9,7 @@ use crate::env::{
 
 use std::net::SocketAddr;
 
+use anyhow::{Error, anyhow};
 use api_framework::shutdown;
 use axum::Router;
 use tokio::net::TcpListener;
@@ -22,11 +23,10 @@ pub mod middleware;
 
 #[tokio::main]
 async fn main() {
-    dotenvy::dotenv().ok();
-    dotenvy::from_filename_override(format!("{}.env", clap::crate_name!())).ok();
+    env::setup();
     trace::setup().unwrap();
-
     trace!("loaded environment: {:#?}", std::env::vars());
+
     info!(
         "binary {} version {}",
         clap::crate_name!(),
@@ -35,12 +35,16 @@ async fn main() {
     info!("compiled from commit {GIT_HASH} at {BUILD_TIMESTAMP}");
     info!("starting server on port {}…", *PORT);
 
+    serve().await.unwrap();
+
+    info!("stopping…");
+}
+
+async fn serve() -> Result<(), Error> {
     let mut app = Router::new();
     app = endpoint::route_from(app);
 
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", *PORT))
-        .await
-        .unwrap();
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", *PORT)).await?;
 
     axum::serve(
         listener,
@@ -48,7 +52,5 @@ async fn main() {
     )
     .with_graceful_shutdown(shutdown::signal())
     .await
-    .unwrap();
-
-    info!("stopping!");
+    .map_err(|e| anyhow!(e))
 }

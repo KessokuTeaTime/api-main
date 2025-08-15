@@ -2,7 +2,6 @@
 
 use axum::{
     Router,
-    middleware::from_fn,
     routing::{get, post},
 };
 use tower_http::trace::TraceLayer;
