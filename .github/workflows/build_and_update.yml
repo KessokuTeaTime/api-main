@@ -23,6 +23,8 @@ jobs:
 
       - name: Setup Rust & Cargo
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
 
       - run: rustup --version
 
