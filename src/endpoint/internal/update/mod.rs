@@ -46,9 +46,11 @@ async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload)
     let path = PathBuf::from("./update");
     unwrap!(download_and_extract_archive(artifact, &path).await);
 
-    drop(SHUTDOWN.send(ShutdownAction::Update {
-        executable_path: path.join(clap::crate_name!()),
-    }));
+    SHUTDOWN
+        .send(ShutdownAction::Update {
+            executable_path: path.join(clap::crate_name!()),
+        })
+        .ok();
 
     State::Success(())
 }
