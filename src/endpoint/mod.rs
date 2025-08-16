@@ -6,7 +6,7 @@ use axum::{
 };
 use tower_http::trace::TraceLayer;
 
-use crate::middleware::auth::layers::kessoku_private_ci_authorization;
+use crate::middleware::auth::layers;
 
 pub mod health;
 pub mod internal;
@@ -25,10 +25,11 @@ fn route_gets(app: Router) -> Router {
 fn route_posts(app: Router) -> Router {
     app.route(
         "/internal/update",
-        post(internal::update::post).route_layer(kessoku_private_ci_authorization()),
+        post(internal::update::post).route_layer(layers::kessoku_private_ci_authorization()),
     )
     .route(
         "/internal/website/deploy",
-        post(internal::website::deploy::post).route_layer(kessoku_private_ci_authorization()),
+        post(internal::website::deploy::post)
+            .route_layer(layers::kessoku_private_ci_authorization()),
     )
 }
