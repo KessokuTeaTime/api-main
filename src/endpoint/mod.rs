@@ -25,11 +25,12 @@ fn route_gets(app: Router) -> Router {
 fn route_posts(app: Router) -> Router {
     app.route(
         "/internal/update",
-        post(internal::update::post).route_layer(layers::kessoku_private_ci_authorization()),
+        post(internal::update::post)
+            .route_layer(layers::KESSOKU_PRIVATE_CI_AUTHORIZATION.to_owned()),
     )
     .route(
         "/internal/website/deploy",
         post(internal::website::deploy::post)
-            .route_layer(layers::kessoku_private_ci_authorization()),
+            .route_layer(layers::KESSOKU_PRIVATE_CI_AUTHORIZATION.to_owned()),
     )
 }
