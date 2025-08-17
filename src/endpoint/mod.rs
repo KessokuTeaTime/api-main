@@ -1,12 +1,12 @@
 //! The API endpoints.
 
+use crate::middleware;
+
 use axum::{
     Router,
     routing::{get, post},
 };
 use tower_http::trace::TraceLayer;
-
-use crate::middleware::auth::layers;
 
 pub mod health;
 pub mod internal;
@@ -26,11 +26,11 @@ fn route_posts(app: Router) -> Router {
     app.route(
         "/internal/update",
         post(internal::update::post)
-            .route_layer(layers::KESSOKU_PRIVATE_CI_AUTHORIZATION.to_owned()),
+            .route_layer(middleware::auth::layers::KESSOKU_PRIVATE_CI_AUTHORIZATION.to_owned()),
     )
     .route(
         "/internal/website/deploy",
         post(internal::website::deploy::post)
-            .route_layer(layers::KESSOKU_PRIVATE_CI_AUTHORIZATION.to_owned()),
+            .route_layer(middleware::auth::layers::KESSOKU_PRIVATE_CI_AUTHORIZATION.to_owned()),
     )
 }
