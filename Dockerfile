@@ -6,6 +6,7 @@ RUN rustup show
 
 COPY . .
 RUN cargo build --release
+RUN echo "=== target dir ===" && ls -R /app/target
 
 # -----------------------
 FROM debian:bookworm-slim
