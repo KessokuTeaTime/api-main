@@ -13,8 +13,8 @@ COPY Cargo.toml Cargo.lock build.rs ./
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
     mkdir src && echo "fn main(){}" > src/main.rs && \
-    cargo build --release
-RUN rm -rf src
+    cargo build --release && \
+    rm -rf src
 
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
