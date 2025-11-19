@@ -4,21 +4,26 @@
 
 FROM rust:bookworm AS rust_builder
 
+RUN cargo install cargo-chef sccache --locked
+ENV RUSTC_WRAPPER=sccache \
+    SCCACHE_DIR=/sccache
+
 WORKDIR /app
 
 COPY rust-toolchain.toml ./
 RUN rustup toolchain install --profile minimal $(grep "channel" rust-toolchain.toml | cut -d'"' -f2)
 
 COPY Cargo.toml Cargo.lock build.rs ./
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    mkdir src && echo "fn main(){}" > src/main.rs && \
-    cargo build --release && \
-    rm -rf src
+RUN cargo chef prepare --recipe-path recipe.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
+    cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
     cargo build --release
 
 # Runtime image
