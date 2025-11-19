@@ -48,5 +48,5 @@ jobs:
           endpoint: ${{ vars.KTT_API_ENDPOINT }}
           payload: |
             {
-              "image": "${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:latest",
+              "image": "${{ secrets.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME }}:latest"
             }
