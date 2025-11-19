@@ -4,9 +4,6 @@ WORKDIR /app
 COPY rust-toolchain.toml ./
 RUN rustup show
 
-COPY Cargo.toml Cargo.lock ./
-RUN cargo fetch
-
 COPY . .
 RUN cargo build --release
 
