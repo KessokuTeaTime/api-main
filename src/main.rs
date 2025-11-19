@@ -10,7 +10,6 @@ use crate::env::{
 use std::net::SocketAddr;
 
 use anyhow::{Error, anyhow};
-use api_framework::shutdown;
 use axum::Router;
 use tokio::net::TcpListener;
 use tracing::{info, trace};
@@ -50,7 +49,6 @@ async fn serve() -> Result<(), Error> {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown::signal())
     .await
     .map_err(|e| anyhow!(e))
 }

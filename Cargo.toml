@@ -5,7 +5,7 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
-api-framework = { git = "https://github.com/KessokuTeaTime/api-framework", features = [
+api-framework = { git = "https://github.com/KessokuTeaTime/api-framework", default-features = false, features = [
     "framework",
 ] }
 anyhow = "1.0.98"
