@@ -1,9 +1,5 @@
 # syntax=docker/dockerfile:1.5
 
-# Docker CLI
-
-FROM docker:27-cli AS docker_cli
-
 # Rust builder
 
 FROM rust:bookworm AS rust_builder
@@ -28,13 +24,12 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 # Runtime image
 
 FROM debian:bookworm-slim
-
-COPY --from=docker_cli /usr/local/bin/docker /usr/local/bin/docker
-COPY --from=docker_cli /usr/libexec/docker/ /usr/libexec/docker/
-COPY --from=docker_cli /usr/local/lib/docker/cli-plugins /usr/local/lib/docker/cli-plugins
+RUN curl -fsSL https://get.docker.com | sh
 
 WORKDIR /app
 
 COPY --from=rust_builder /app/target/release/main .
+
+# Commands
 
 CMD ["./main"]
