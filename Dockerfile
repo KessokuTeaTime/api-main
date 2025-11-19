@@ -1,10 +1,16 @@
-# --- Rust builder ---
 FROM rust:1.82 AS rust_builder
 WORKDIR /app
+
+COPY Cargo.toml Cargo.lock ./
+RUN cargo fetch
+
 COPY . .
 RUN cargo build --release
 
-FROM scratch
-COPY --from=rust_builder /target/release/api /api
+# -----------------------
+FROM debian:bookworm-slim
+
+WORKDIR /app
+COPY --from=rust_builder /app/target/release/api-main .
 
 CMD ["./api"]
