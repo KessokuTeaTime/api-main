@@ -1,5 +1,9 @@
-FROM rust:1.82 AS rust_builder
+FROM rust:latest AS rust_builder
 WORKDIR /app
+
+COPY rust-toolchain.toml ./
+COPY rust-toolchain ./
+RUN rustup show   # this installs the pinned toolchain automatically
 
 COPY Cargo.toml Cargo.lock ./
 RUN cargo fetch
