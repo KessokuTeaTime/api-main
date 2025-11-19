@@ -2,8 +2,7 @@ FROM rust:latest AS rust_builder
 WORKDIR /app
 
 COPY rust-toolchain.toml ./
-COPY rust-toolchain ./
-RUN rustup show   # this installs the pinned toolchain automatically
+RUN rustup show
 
 COPY Cargo.toml Cargo.lock ./
 RUN cargo fetch
