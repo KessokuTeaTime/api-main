@@ -66,3 +66,7 @@ codegen-units = 1
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "api-main"
+path = "src/main.rs"
