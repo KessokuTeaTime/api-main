@@ -9,7 +9,7 @@ WORKDIR /app
 COPY rust-toolchain.toml ./
 RUN rustup toolchain install --profile minimal $(grep "channel" rust-toolchain.toml | cut -d'"' -f2)
 
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
     mkdir src && echo "fn main(){}" > src/main.rs && \
