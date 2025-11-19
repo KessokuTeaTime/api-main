@@ -42,3 +42,13 @@ static_lazy_lock! {
     pub TRACING_DIR: PathBuf = parse_env!("TRACING_DIR" => |s| Ok(PathBuf::from(s))).unwrap_or(PathBuf::from("/tmp/tracing")).join(clap::crate_name!());
     "The directory for tracing files. Defaults to `/tmp/tracing/main` if not specified."
 }
+
+static_lazy_lock! {
+    pub DOCKER_CONTAINER_NAME: String = env::var("DOCKER_CONTAINER_NAME").unwrap_or_else(|_| format!("api-{}", clap::crate_name!()));
+    "The name of the Docker container that runs this service."
+}
+
+static_lazy_lock! {
+    pub DOCKER_COMPOSE_FILE: PathBuf = parse_env!("DOCKER_COMPOSE_FILE" => |s| Ok(PathBuf::from(s))).unwrap();
+    "The path to the Docker Compose file."
+}
