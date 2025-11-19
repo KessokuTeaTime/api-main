@@ -2,9 +2,7 @@
 
 # Docker CLI
 
-FROM debian:12 AS docker_cli
-RUN apt-get update && \
-    apt-get install -y docker.io docker-compose-plugin
+FROM docker:27-cli AS docker_cli
 
 # Rust builder
 
@@ -31,9 +29,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 FROM debian:bookworm-slim
 
-COPY --from=docker_cli /usr/bin/docker /usr/bin/docker
+COPY --from=docker_cli /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=docker_cli /usr/libexec/docker/ /usr/libexec/docker/
-COPY --from=docker_cli /usr/bin/docker-compose /usr/bin/docker-compose
+COPY --from=docker_cli /usr/local/lib/docker/cli-plugins /usr/local/lib/docker/cli-plugins
 
 WORKDIR /app
 
