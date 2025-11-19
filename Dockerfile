@@ -13,4 +13,4 @@ FROM debian:bookworm-slim
 WORKDIR /app
 COPY --from=rust_builder /app/target/release/main .
 
-CMD ["./api"]
+CMD ["./main"]
