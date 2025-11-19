@@ -21,7 +21,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
-RUN echo "Listing files:" && ls -R .
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
@@ -34,8 +33,8 @@ RUN curl -fsSL https://get.docker.com | sh
 
 WORKDIR /app
 
-COPY --from=rust_builder /app/target/release/main .
+COPY --from=rust_builder /app/target/release/api-main .
 
 # Commands
 
-CMD ["./main"]
+CMD ["./api-main"]
