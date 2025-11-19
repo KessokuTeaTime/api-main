@@ -11,7 +11,7 @@ use api_framework::{
 
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use docker_wrapper::{
-    DockerCommand,
+    DockerCommand, PullCommand,
     command::{ComposeCommand, compose_up::ComposeUpCommand},
 };
 use serde::Deserialize;
@@ -40,8 +40,16 @@ pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
     StatusCode::OK
 }
 
-async fn post_transaction(cx: QueuedAsyncFrameworkContext, _payload: PostPayload) -> State<()> {
+async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     unwrap!(cx.check());
+
+    match PullCommand::new(payload.image.clone()).execute().await {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::error!("failed to pull the image {}: {e:?}", payload.image);
+            return State::Retry;
+        }
+    }
 
     match ComposeUpCommand::new()
         .file(&*DOCKER_COMPOSE_FILE)
@@ -50,10 +58,12 @@ async fn post_transaction(cx: QueuedAsyncFrameworkContext, _payload: PostPayload
         .execute()
         .await
     {
-        Ok(_) => State::Success(()),
+        Ok(_) => {}
         Err(e) => {
             tracing::error!("failed to update the service: {e:?}");
-            State::Retry
+            return State::Retry;
         }
     }
+
+    State::Success(())
 }
