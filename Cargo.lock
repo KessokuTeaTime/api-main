@@ -115,17 +115,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-trait"
-version = "0.1.89"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -448,19 +437,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "docker-wrapper"
-version = "0.8.3"
-source = "git+https://github.com/KrLite/docker-wrapper?branch=fix%2Fcommand-execution#8231a4c41ea4ba68622576f0f52081c24fb982f7"
-dependencies = [
- "async-trait",
- "serde",
- "serde_json",
- "thiserror 2.0.14",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -1068,7 +1044,6 @@ dependencies = [
  "api-framework",
  "axum",
  "clap",
- "docker-wrapper",
  "dotenvy",
  "file-rotate",
  "serde",

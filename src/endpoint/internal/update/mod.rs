@@ -10,13 +10,9 @@ use api_framework::{
 };
 
 use axum::{Json, http::StatusCode, response::IntoResponse};
-use docker_wrapper::{
-    DockerCommand, PullCommand,
-    command::{ComposeCommand, compose_up::ComposeUpCommand},
-};
 use serde::Deserialize;
 
-use crate::env::{DOCKER_COMPOSE_FILE, DOCKER_CONTAINER_NAME};
+use crate::{env::DOCKER_CONTAINER_NAME, transactions};
 
 static_lazy_lock! {
     QUEUED_ASYNC: QueuedAsyncFramework<String> = QueuedAsyncFramework::new();
@@ -42,32 +38,21 @@ pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
 
 async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     unwrap!(cx.check());
-    unwrap!(cx.check());
 
-    match PullCommand::new(payload.image.clone()).execute().await {
-        Ok(_) => {
-            tracing::info!("successfully pulled image {}", &payload.image);
-        }
+    match transactions::docker::pull_image(&payload.image).await {
+        Ok(_) => {}
         Err(e) => {
-            tracing::error!("failed to pull image {}: {e:?}", &payload.image);
+            tracing::error!("failed to update: {e:?}");
             return State::Retry;
         }
     }
 
     unwrap!(cx.check());
 
-    match ComposeUpCommand::new()
-        .file(&*DOCKER_COMPOSE_FILE)
-        .project_name(&*DOCKER_CONTAINER_NAME)
-        .detach()
-        .execute()
-        .await
-    {
-        Ok(_) => {
-            tracing::info!("successfully uped container {}", &*DOCKER_CONTAINER_NAME);
-        }
+    match transactions::docker::compose_up(&DOCKER_CONTAINER_NAME).await {
+        Ok(_) => {}
         Err(e) => {
-            tracing::error!("failed to up container {}: {e:?}", &*DOCKER_CONTAINER_NAME);
+            tracing::error!("failed to deploy {}: {e:?}", &*DOCKER_CONTAINER_NAME);
             return State::Retry;
         }
     }
