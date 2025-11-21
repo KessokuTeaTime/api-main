@@ -42,25 +42,32 @@ pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
 
 async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     unwrap!(cx.check());
+    unwrap!(cx.check());
 
     match PullCommand::new(payload.image.clone()).execute().await {
-        Ok(_) => {}
+        Ok(_) => {
+            tracing::info!("successfully pulled image {}", &payload.image);
+        }
         Err(e) => {
-            tracing::error!("failed to pull the image {}: {e:?}", payload.image);
+            tracing::error!("failed to pull image {}: {e:?}", &payload.image);
             return State::Retry;
         }
     }
 
+    unwrap!(cx.check());
+
     match ComposeUpCommand::new()
         .file(&*DOCKER_COMPOSE_FILE)
-        .service(&*DOCKER_CONTAINER_NAME)
+        .project_name(&*DOCKER_CONTAINER_NAME)
         .detach()
         .execute()
         .await
     {
-        Ok(_) => {}
+        Ok(_) => {
+            tracing::info!("successfully uped container {}", &*DOCKER_CONTAINER_NAME);
+        }
         Err(e) => {
-            tracing::error!("failed to update the service: {e:?}");
+            tracing::error!("failed to up container {}: {e:?}", &*DOCKER_CONTAINER_NAME);
             return State::Retry;
         }
     }

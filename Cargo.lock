@@ -453,8 +453,7 @@ dependencies = [
 [[package]]
 name = "docker-wrapper"
 version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45b82238eade1a57cc391ef57778c5c44abcffc661c8307dde8d0fbad59e0410"
+source = "git+https://github.com/KrLite/docker-wrapper?branch=fix%2Fcommand-execution#8231a4c41ea4ba68622576f0f52081c24fb982f7"
 dependencies = [
  "async-trait",
  "serde",

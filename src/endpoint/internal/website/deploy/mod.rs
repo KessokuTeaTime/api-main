@@ -69,23 +69,29 @@ async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload)
     unwrap!(cx.check());
 
     match PullCommand::new(payload.image.clone()).execute().await {
-        Ok(_) => {}
+        Ok(_) => {
+            tracing::info!("successfully pulled image {}", &payload.image);
+        }
         Err(e) => {
-            tracing::error!("failed to pull the image {}: {e:?}", payload.image);
+            tracing::error!("failed to pull image {}: {e:?}", &payload.image);
             return State::Retry;
         }
     }
 
+    unwrap!(cx.check());
+
     match ComposeUpCommand::new()
         .file(&*DOCKER_COMPOSE_FILE)
-        .service(payload.target.to_string())
+        .project_name(payload.target.to_string())
         .detach()
         .execute()
         .await
     {
-        Ok(_) => {}
+        Ok(_) => {
+            tracing::info!("successfully uped container {}", &payload.target);
+        }
         Err(e) => {
-            tracing::error!("failed to update the service: {e:?}");
+            tracing::error!("failed to up container {}: {e:?}", &payload.target);
             return State::Retry;
         }
     }
