@@ -23,9 +23,12 @@ static_lazy_lock! {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Deserialize)]
 pub enum PostPayloadDestination {
-    /// The website destination.
+    /// Website.
     #[serde(rename(deserialize = "www"))]
     Website,
+    /// Equinox Parterre: calendar.
+    #[serde(rename(deserialize = "equinoxparterre/calendar"))]
+    EquinoxParterreCalendar,
 }
 
 impl Display for PostPayloadDestination {
@@ -35,6 +38,8 @@ impl Display for PostPayloadDestination {
             "{}",
             match self {
                 PostPayloadDestination::Website => "website (www)",
+                PostPayloadDestination::EquinoxParterreCalendar =>
+                    "equinox parterre calendar (equinoxparterre/calendar)",
             }
         )
     }
