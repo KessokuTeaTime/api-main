@@ -10,7 +10,7 @@ use api_framework::{
 };
 
 use axum::{extract::Json, http::StatusCode, response::IntoResponse};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 use crate::transactions;
@@ -21,14 +21,71 @@ static_lazy_lock! {
 
 /// The type-safe possible destinations of the post.
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum PostPayloadDestination {
-    /// Website.
-    #[serde(rename(deserialize = "www"))]
+    /// The website destination.
     Website,
-    /// Equinox Parterre: calendar.
-    #[serde(rename(deserialize = "equinoxparterre/calendar"))]
-    EquinoxParterreCalendar,
+    /// Equinox Parterre destinations.
+    ///
+    /// See: [`PostPayloadEquinoxParterreDestination`]
+    EquinoxParterre(PostPayloadEquinoxParterreDestination),
+}
+
+impl<'de> Deserialize<'de> for PostPayloadDestination {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "website" | "www" => Ok(Self::Website),
+            "equinoxparterre/calendar" => Ok(Self::EquinoxParterre(
+                PostPayloadEquinoxParterreDestination::Calendar,
+            )),
+            _ => {
+                tracing::error!("unknown deployment destination: {}", s);
+                Err(serde::de::Error::custom(format!(
+                    "unknown destination: {}",
+                    s
+                )))
+            }
+        }
+    }
+}
+
+impl Serialize for PostPayloadDestination {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Website => serializer.serialize_str("www"),
+            Self::EquinoxParterre(destination) => {
+                serializer.serialize_str(&format!("equinoxparterre/{}", destination))
+            }
+        }
+    }
+}
+
+/// Equinox Parterre destinations of the post.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PostPayloadEquinoxParterreDestination {
+    #[serde(rename = "calendar")]
+    /// The calendar service.
+    Calendar,
+}
+
+impl Display for PostPayloadEquinoxParterreDestination {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Calendar => "calendar",
+            }
+        )
+    }
 }
 
 impl Display for PostPayloadDestination {
@@ -37,9 +94,13 @@ impl Display for PostPayloadDestination {
             f,
             "{}",
             match self {
-                PostPayloadDestination::Website => "website (www)",
-                PostPayloadDestination::EquinoxParterreCalendar =>
-                    "equinox parterre calendar (equinoxparterre/calendar)",
+                Self::Website => "website (www)".into(),
+                Self::EquinoxParterre(destination) => {
+                    format!(
+                        "equinox parterre {} (equinoxparterre/{})",
+                        destination, destination
+                    )
+                }
             }
         )
     }
@@ -60,7 +121,7 @@ unsafe impl Send for PostPayload {}
 /// See: [`PostPayload`], [`post_transaction`]
 pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
     tokio::spawn(QUEUED_ASYNC.run(payload.target, move |cx| {
-        Box::pin(post_transaction(cx.clone(), payload.clone()))
+        Box::pin(post_transaction(cx, payload.clone()))
     }));
 
     StatusCode::OK

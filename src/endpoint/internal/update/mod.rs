@@ -30,7 +30,7 @@ pub struct PostPayload {
 /// See: [`PostPayload`], [`post_transaction`]
 pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
     tokio::spawn(QUEUED_ASYNC.run(payload.image.clone(), move |cx| {
-        Box::pin(post_transaction(cx.clone(), payload.clone()))
+        Box::pin(post_transaction(cx, payload.clone()))
     }));
 
     StatusCode::OK

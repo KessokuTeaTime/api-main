@@ -5,7 +5,7 @@ use file_rotate::{ContentLimit, FileRotate, compression::Compression, suffix::Ap
 use tracing::level_filters::LevelFilter;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
-    Layer, fmt::time::ChronoLocal, layer::SubscriberExt, util::SubscriberInitExt,
+    Layer as _, fmt::time::ChronoLocal, layer::SubscriberExt as _, util::SubscriberInitExt as _,
 };
 
 use crate::env::{TRACING_DIR, TRACING_MAX_FILES};
