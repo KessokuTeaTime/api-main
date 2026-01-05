@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for PostPayloadDestination {
     {
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
-            "website" | "www" => Ok(Self::Website),
+            "www" => Ok(Self::Website),
             "equinoxparterre/calendar" => Ok(Self::EquinoxParterre(
                 PostPayloadEquinoxParterreDestination::Calendar,
             )),
