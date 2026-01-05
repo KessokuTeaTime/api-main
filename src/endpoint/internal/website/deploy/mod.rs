@@ -45,8 +45,7 @@ impl<'de> Deserialize<'de> for PostPayloadDestination {
             _ => {
                 tracing::error!("unknown deployment destination: {}", s);
                 Err(serde::de::Error::custom(format!(
-                    "unknown destination: {}",
-                    s
+                    "unknown destination: {s}",
                 )))
             }
         }
@@ -61,7 +60,7 @@ impl Serialize for PostPayloadDestination {
         match self {
             Self::Website => serializer.serialize_str("www"),
             Self::EquinoxParterre(destination) => {
-                serializer.serialize_str(&format!("equinoxparterre/{}", destination))
+                serializer.serialize_str(&format!("equinoxparterre/{destination}"))
             }
         }
     }
@@ -96,10 +95,7 @@ impl Display for PostPayloadDestination {
             match self {
                 Self::Website => "website (www)".into(),
                 Self::EquinoxParterre(destination) => {
-                    format!(
-                        "equinox parterre {} (equinoxparterre/{})",
-                        destination, destination
-                    )
+                    format!("equinox parterre {destination} (equinoxparterre/{destination})",)
                 }
             }
         )
