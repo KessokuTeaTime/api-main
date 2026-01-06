@@ -23,12 +23,10 @@ static_lazy_lock! {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum PostPayloadDestination {
-    /// The website destination.
+    /// The websitw.
     Website,
-    /// Equinox Parterre destinations.
-    ///
-    /// See: [`PostPayloadEquinoxParterreDestination`]
-    EquinoxParterre(PostPayloadEquinoxParterreDestination),
+    /// The caledar.
+    Calendar,
 }
 
 impl<'de> Deserialize<'de> for PostPayloadDestination {
@@ -39,9 +37,7 @@ impl<'de> Deserialize<'de> for PostPayloadDestination {
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
             "www" => Ok(Self::Website),
-            "equinoxparterre/calendar" => Ok(Self::EquinoxParterre(
-                PostPayloadEquinoxParterreDestination::Calendar,
-            )),
+            "calendar" => Ok(Self::Calendar),
             _ => {
                 tracing::error!("unknown deployment destination: {}", s);
                 Err(serde::de::Error::custom(format!(
@@ -59,31 +55,8 @@ impl Serialize for PostPayloadDestination {
     {
         match self {
             Self::Website => serializer.serialize_str("www"),
-            Self::EquinoxParterre(destination) => {
-                serializer.serialize_str(&format!("equinoxparterre/{destination}"))
-            }
+            Self::Calendar => serializer.serialize_str("calendar"),
         }
-    }
-}
-
-/// Equinox Parterre destinations of the post.
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PostPayloadEquinoxParterreDestination {
-    #[serde(rename = "calendar")]
-    /// The calendar service.
-    Calendar,
-}
-
-impl Display for PostPayloadEquinoxParterreDestination {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Calendar => "calendar",
-            }
-        )
     }
 }
 
@@ -93,10 +66,8 @@ impl Display for PostPayloadDestination {
             f,
             "{}",
             match self {
-                Self::Website => "website (www)".into(),
-                Self::EquinoxParterre(destination) => {
-                    format!("equinox parterre {destination} (equinoxparterre/{destination})",)
-                }
+                Self::Website => "website (www)",
+                Self::Calendar => "calendar (calendar)",
             }
         )
     }
