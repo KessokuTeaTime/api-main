@@ -44,6 +44,16 @@ static_lazy_lock! {
 }
 
 static_lazy_lock! {
+    /// The Docker username.
+    pub DOCKER_USERNAME: String = env::var("DOCKER_USERNAME").expect("DOCKER_USERNAME not set in environment");
+}
+
+static_lazy_lock! {
+    /// The Docker password or personal access token.
+    pub DOCKER_PASSWORD: String = env::var("DOCKER_PASSWORD").expect("DOCKER_PASSWORD not set in environment");
+}
+
+static_lazy_lock! {
     /// The name of the Docker container that runs this service.
     pub DOCKER_CONTAINER_NAME: String = env::var("DOCKER_CONTAINER_NAME").unwrap_or_else(|_| format!("api-{}", clap::crate_name!()));
 }

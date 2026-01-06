@@ -39,6 +39,18 @@ pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
 async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     unwrap!(cx.check());
 
+    // login
+    match transactions::docker::login().await {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::error!("failed to login: {e:?}");
+            return State::Retry;
+        }
+    }
+
+    unwrap!(cx.check());
+
+    // pull image
     match transactions::docker::pull_image(&payload.image).await {
         Ok(_) => {}
         Err(e) => {
@@ -49,11 +61,22 @@ async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload)
 
     unwrap!(cx.check());
 
+    // up container
     match transactions::docker::compose_up(&DOCKER_CONTAINER_NAME).await {
         Ok(_) => {}
         Err(e) => {
             tracing::error!("failed to update {}: {e:?}", &*DOCKER_CONTAINER_NAME);
             return State::Retry;
+        }
+    }
+
+    unwrap!(cx.check());
+
+    // logout
+    match transactions::docker::logout().await {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::warn!("failed to logout: {e:?}");
         }
     }
 
