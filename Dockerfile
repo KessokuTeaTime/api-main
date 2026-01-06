@@ -1,6 +1,10 @@
-# Rust builder
+# rust builder
 
 FROM rust:bookworm AS rust_builder
+
+ARG GIT_COMMIT
+
+ENV GIT_COMMIT=$GIT_COMMIT
 
 WORKDIR /app
 
@@ -10,7 +14,7 @@ RUN rustup toolchain install --profile minimal $(grep "channel" rust-toolchain.t
 COPY . .
 RUN cargo build --release
 
-# Runtime image
+# runtime image
 
 FROM debian:bookworm-slim
 
@@ -27,6 +31,6 @@ RUN apt-get update && \
     apt-get install -y docker-ce-cli && \
     rm -rf /var/lib/apt/lists/*
 
-# Commands
+# commands
 
 CMD ["./api-main"]
