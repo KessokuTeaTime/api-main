@@ -9,5 +9,5 @@ use tracing::info;
 /// Responds with [`StatusCode::OK`].
 pub async fn get(ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
     info!("server is healthy. responding to {addr}…");
-    (StatusCode::OK, format!("Huston, good to hear from {addr}!"))
+    (StatusCode::OK, format!("Good to hear from {addr}!"))
 }

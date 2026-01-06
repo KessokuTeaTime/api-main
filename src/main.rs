@@ -14,8 +14,6 @@ use axum::Router;
 use tokio::net::TcpListener;
 use tracing::{info, trace};
 
-mod transactions;
-
 pub mod env;
 pub mod trace;
 

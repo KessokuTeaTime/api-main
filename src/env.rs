@@ -42,23 +42,3 @@ static_lazy_lock! {
     /// The directory for tracing files. Defaults to `/tmp/tracing/main` if not specified.
     pub TRACING_DIR: PathBuf = parse_env!("TRACING_DIR" => |s| Ok(PathBuf::from(s))).unwrap_or(PathBuf::from("/tmp/tracing")).join(clap::crate_name!());
 }
-
-static_lazy_lock! {
-    /// The Docker username.
-    pub DOCKER_USERNAME: String = env::var("DOCKER_USERNAME").expect("DOCKER_USERNAME not set in environment");
-}
-
-static_lazy_lock! {
-    /// The Docker password or personal access token.
-    pub DOCKER_PASSWORD: String = env::var("DOCKER_PASSWORD").expect("DOCKER_PASSWORD not set in environment");
-}
-
-static_lazy_lock! {
-    /// The name of the Docker container that runs this service.
-    pub DOCKER_CONTAINER_NAME: String = env::var("DOCKER_CONTAINER_NAME").unwrap_or_else(|_| format!("api-{}", clap::crate_name!()));
-}
-
-static_lazy_lock! {
-    /// The path to the Docker Compose file.
-    pub DOCKER_COMPOSE_FILE: PathBuf = parse_env!("DOCKER_COMPOSE_FILE" => |s| Ok(PathBuf::from(s))).unwrap();
-}

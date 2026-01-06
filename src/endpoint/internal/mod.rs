@@ -3,6 +3,3 @@
 //! Endpoint `/internal`.
 //!
 //! See: [`crate::middleware::auth`]
-
-pub mod update;
-pub mod website;
