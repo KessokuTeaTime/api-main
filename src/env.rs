@@ -49,11 +49,6 @@ static_lazy_lock! {
 }
 
 static_lazy_lock! {
-    /// The name of the Docker container that runs Nginx.
-    pub DOCKER_CONTAINER_NAME_NGINX: String = env::var("DOCKER_CONTAINER_NAME_NGINX").unwrap_or_else(|_| "nginx".into());
-}
-
-static_lazy_lock! {
     /// The path to the Docker Compose file.
     pub DOCKER_COMPOSE_FILE: PathBuf = parse_env!("DOCKER_COMPOSE_FILE" => |s| Ok(PathBuf::from(s))).unwrap();
 }

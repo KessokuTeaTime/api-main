@@ -2,26 +2,30 @@ use anyhow::Result;
 
 use crate::env::DOCKER_COMPOSE_FILE;
 
-pub async fn compose_down(container_name: &str) -> Result<()> {
+pub async fn pull_image(image: &str) -> Result<()> {
     match tokio::process::Command::new("docker")
-        .arg("compose")
-        .arg("-f")
-        .arg(&*DOCKER_COMPOSE_FILE)
-        .arg("down")
-        .arg("--rmi")
-        .arg("local")
-        .arg("--volumes")
-        .arg("--remove-orphans")
+        .arg("pull")
+        .arg(image)
         .output()
         .await
     {
-        Ok(_) => {
-            tracing::info!("successfully downed container {}", container_name);
-            Ok(())
+        Ok(output) => {
+            if output.status.success() {
+                tracing::info!("successfully pulled image {image}");
+                Ok(())
+            } else {
+                tracing::error!(
+                    "failed to pull image {image}: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                Err(anyhow::anyhow!("failed to pull image {image}"))
+            }
         }
         Err(e) => {
-            tracing::error!("failed to down container {}: {e:?}", container_name);
-            Err(anyhow::anyhow!("failed to down container"))
+            tracing::error!("command failed to execute: pulling image {image}: {e:?}");
+            Err(anyhow::anyhow!(
+                "command failed to execute: pulling image {image}"
+            ))
         }
     }
 }
@@ -34,19 +38,26 @@ pub async fn compose_up(container_name: &str) -> Result<()> {
         .arg("up")
         .arg("-d")
         .arg(container_name)
-        .arg("--pull")
-        .arg("always")
-        .arg("--force-recreate")
         .output()
         .await
     {
-        Ok(_) => {
-            tracing::info!("successfully uped container {}", container_name);
-            Ok(())
+        Ok(output) => {
+            if output.status.success() {
+                tracing::info!("successfully upped container {container_name}");
+                Ok(())
+            } else {
+                tracing::error!(
+                    "failed to up container {container_name}: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                Err(anyhow::anyhow!("failed to up container {container_name}"))
+            }
         }
         Err(e) => {
-            tracing::error!("failed to up container {}: {e:?}", container_name);
-            Err(anyhow::anyhow!("failed to up container"))
+            tracing::error!("command failed to execute: upping container {container_name}: {e:?}");
+            Err(anyhow::anyhow!(
+                "command failed to execute: upping container {container_name}"
+            ))
         }
     }
 }

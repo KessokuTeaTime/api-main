@@ -97,6 +97,16 @@ pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
 async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     unwrap!(cx.check());
 
+    match transactions::docker::pull_image(&payload.image).await {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::error!("failed to deploy {}: {e:?}", &payload.target);
+            return State::Retry;
+        }
+    }
+
+    unwrap!(cx.check());
+
     match transactions::docker::compose_up(payload.target.to_string().as_str()).await {
         Ok(_) => {}
         Err(e) => {

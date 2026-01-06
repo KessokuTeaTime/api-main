@@ -36,32 +36,23 @@ pub async fn post(Json(payload): Json<PostPayload>) -> impl IntoResponse {
     StatusCode::OK
 }
 
-async fn post_transaction(cx: QueuedAsyncFrameworkContext, _payload: PostPayload) -> State<()> {
+async fn post_transaction(cx: QueuedAsyncFrameworkContext, payload: PostPayload) -> State<()> {
     unwrap!(cx.check());
 
-    match transactions::docker::compose_down(&DOCKER_CONTAINER_NAME).await {
+    match transactions::docker::pull_image(&payload.image).await {
         Ok(_) => {}
         Err(e) => {
             tracing::error!("failed to update {}: {e:?}", &*DOCKER_CONTAINER_NAME);
             return State::Retry;
         }
     }
+
+    unwrap!(cx.check());
 
     match transactions::docker::compose_up(&DOCKER_CONTAINER_NAME).await {
         Ok(_) => {}
         Err(e) => {
             tracing::error!("failed to update {}: {e:?}", &*DOCKER_CONTAINER_NAME);
-            return State::Retry;
-        }
-    }
-
-    match transactions::nginx::reload().await {
-        Ok(_) => {}
-        Err(e) => {
-            tracing::error!(
-                "failed to reload nginx after updating {}: {e:?}",
-                &*DOCKER_CONTAINER_NAME
-            );
             return State::Retry;
         }
     }
