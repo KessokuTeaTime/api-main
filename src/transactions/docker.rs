@@ -28,6 +28,7 @@ pub async fn compose_up(container_name: &str) -> Result<()> {
         .arg("up")
         .arg("-d")
         .arg(container_name)
+        .arg("--force-recreate")
         .output()
         .await
     {
