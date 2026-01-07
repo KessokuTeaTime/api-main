@@ -32,7 +32,7 @@ async fn main() {
         clap::crate_version!()
     );
     info!("compiled from commit {GIT_HASH} at {BUILD_TIMESTAMP}");
-    info!("starting server on port {}…", *PORT);
+    info!("starting service on port {}…", *PORT);
 
     serve().await.unwrap();
 

@@ -2,7 +2,7 @@
 
 use std::{env, path::PathBuf};
 
-use api_framework::{env::parse_env, static_lazy_lock};
+use api_framework::{parse_env, static_lazy_lock};
 
 /// Sets up environment variables.
 pub fn setup() {
@@ -24,21 +24,11 @@ static_lazy_lock! {
 }
 
 static_lazy_lock! {
-    /// The username of the API key.
-    pub KTT_API_USERNAME: String = env::var("KTT_API_USERNAME").expect("KTT_API_USERNAME not set in environment");
-}
-
-static_lazy_lock! {
-    /// The password of the API key.
-    pub KTT_API_PASSWORD: String = env::var("KTT_API_PASSWORD").expect("KTT_API_PASSWORD not set in environment");
-}
-
-static_lazy_lock! {
     /// The maximum file count to use for tracing.
     pub TRACING_MAX_FILES: usize = parse_env!("TRACING_MAX_FILES" => |s| s.parse::<usize>(); anyhow).unwrap_or(5);
 }
 
 static_lazy_lock! {
     /// The directory for tracing files. Defaults to `/tmp/tracing/main` if not specified.
-    pub TRACING_DIR: PathBuf = parse_env!("TRACING_DIR" => |s| Ok(PathBuf::from(s))).unwrap_or(PathBuf::from("/tmp/tracing")).join(clap::crate_name!());
+    pub TRACING_DIR: PathBuf = parse_env!("TRACING_DIR" => |s| Ok(PathBuf::from(s))).unwrap_or(PathBuf::from("/tmp/tracing").join(clap::crate_name!()));
 }

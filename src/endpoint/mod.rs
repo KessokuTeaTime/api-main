@@ -4,7 +4,6 @@ use axum::{Router, routing::get};
 use tower_http::trace::TraceLayer;
 
 pub mod health;
-pub mod internal;
 
 /// Routes an [`Router`] with the endpoints defined by this module.
 pub fn route_from(mut app: Router) -> Router {
@@ -17,6 +16,4 @@ fn route_gets(app: Router) -> Router {
     app.route("/health", get(health::get))
 }
 
-fn route_posts(app: Router) -> Router {
-    app
-}
+fn route_posts(app: Router) -> Router {}
