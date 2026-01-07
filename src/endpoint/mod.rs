@@ -16,4 +16,6 @@ fn route_gets(app: Router) -> Router {
     app.route("/health", get(health::get))
 }
 
-fn route_posts(app: Router) -> Router {}
+fn route_posts(app: Router) -> Router {
+    app
+}
