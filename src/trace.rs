@@ -8,7 +8,7 @@ use tracing_subscriber::{
     Layer as _, fmt::time::ChronoLocal, layer::SubscriberExt as _, util::SubscriberInitExt as _,
 };
 
-use crate::env::{TRACING_DIR, TRACING_MAX_FILES};
+use crate::env::{TRACING_DIR, TRACING_MAX_FILES, TRACING_STDERR_LEVEL};
 
 /// Sets up the logging component, which contains a stderr layer, a rolling file layer, and a latest file layer.
 ///
@@ -44,7 +44,7 @@ pub fn setup() -> Result<(), Error> {
         .with(
             stderr_layer
                 .with_timer(ChronoLocal::rfc_3339())
-                .with_filter(LevelFilter::INFO),
+                .with_filter(*TRACING_STDERR_LEVEL),
         )
         .with(
             rolling_file_layer
