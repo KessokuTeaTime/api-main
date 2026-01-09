@@ -33,4 +33,6 @@ RUN apt-get update && \
 
 # commands
 
+EXPOSE 8080
+
 CMD ["./api-main"]
